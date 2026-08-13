@@ -1,21 +1,84 @@
-## Build Commands
+`CLAUDE.md` is a symlink to this file — editing either changes both.
+
+## Commands
 
 ```bash
-make # this show available commands
+make                    # list all targets
+make doctor             # verify prerequisites (mise, submodules, Zig-linkable Xcode, Metal toolchain)
+make build-app          # build Debug app; regenerates the Tuist workspace when manifests change
+make run-app            # build and launch Debug
+make test               # all four test bundles in parallel (TEST_PARALLEL=NO to serialize)
+make check              # swift-format + swiftlint
+make log-stream         # stream app logs (subsystem app.supabit.supacode)
+make install-dev-build  # copy the Debug build to /Applications
 ```
 
-Requires [mise](https://mise.jdx.dev/) for zig, swiftlint, swift-format, xcbeautify, and xcsift tooling. Run `mise install` once to fetch the pinned versions.
+Requires [mise](https://mise.jdx.dev/); `mise install` once fetches the pinned tuist, zig, swiftlint, swift-format, and xcbeautify. Use the Make targets rather than raw `tuist` / `xcodebuild`: they own the generation stamps, the quiet `doctor` preflight, and per-build `DEVELOPER_DIR` selection.
+
+### Running a single test
+
+The workspace is generated, so it must exist first (`make generate-project`):
+
+```bash
+xcodebuild test -workspace supacode.xcworkspace -scheme supacode-tests \
+  -destination "platform=macOS" -derivedDataPath .build/DerivedData \
+  -only-testing supacodeFeatureTests/AppFeatureDeeplinkTests \
+  CODE_SIGNING_ALLOWED=NO -skipMacroValidation | mise exec -- xcbeautify
+```
+
+- Tests live in four bundles, assigned by filename glob in `Project.swift`: `supacodeFeatureTests` (`AppFeature*`, `RepositoriesFeature*`), `supacodeGitTests` (`Git*`, `AgentHook*`, `ShellClient*`, real subprocess suites), `supacodeTerminalTests` (`Ghostty*`, `Layout*`, `SplitTree*`, `WorktreeTerminalManager*`, `Zmx*`), `supacodeTests` (everything else). Name a new test file so it lands in the intended bundle. The split exists because most tests are MainActor-bound — one bundle would cap the suite at a single main thread.
+- **A new test file requires project regeneration.** Test targets use explicit globs expanded at generation time, so an unregenerated new file silently runs in no bundle. `make test` handles this; a raw `xcodebuild test` does not.
+- App sources use Tuist buildable folders, so new non-test files need no regeneration.
+- On failure `make test` dumps the assertion text from `build/supacode-tests.xcresult`; the streamed log only reports "Test case … failed".
+
+### Xcode 26.3 on macOS 26.4+
+
+GhosttyKit builds with pinned Zig 0.15.2, whose linker cannot link the macOS 26.4+ SDK (that SDK dropped the `arm64-macos` slice from `libSystem.tbd`), failing with a wall of `undefined symbol`. Install Xcode 26.3, which ships the macOS 26.2 SDK; `scripts/select-developer-dir.sh` pins it per build, so no global `xcode-select` is needed. The one-time `-license accept` / `-runFirstLaunch` / MetalToolchain commands are in the README.
 
 ## Architecture
 
-Supacode is a macOS terminal emulator that for running multiple coding agents in parallel in Git worktrees, using GhosttyKit as the underlying terminal.
+Supacode is a macOS terminal emulator for running multiple coding agents in parallel, each in its own git worktree, with libghostty as the terminal and [zmx](https://zmx.sh) for background session persistence.
+
+### Targets (`Project.swift`)
+
+- **`supacode`** — the app. Buildable folders: `App/`, `Clients/`, `Commands/`, `Domain/`, `Features/`, `Infrastructure/`, `Support/`.
+- **`SupacodeSettingsShared`** — settings models and `@Shared` persistence keys, `ShellClient` (+SSH), coding-agent hook installers, `SupaLogger`, `SupacodePaths`. Everything else depends on it.
+- **`SupacodeSettingsFeature`** — the Settings window (reducers + views).
+- **`supacode-cli`** — the `supacode` binary, embedded in the app bundle and installed by `CLIInstaller`.
+- **`GhosttyKit`** — Tuist `foreignBuild` of `ThirdParty/ghostty` through `scripts/build-ghostty.sh` (Zig; slow, fingerprint-cached).
+- Four unit-test bundles (see above).
+
+### Reducer tree
+
+`AppFeature` (`Features/App/Reducer/AppFeature.swift`) scopes `terminals`, `repositories`, `agentPresence`, `settings`, `updates`, `commandPalette`. `RepositoriesFeature` owns the sidebar — repos, worktrees, PR state, notifications — and is split across `RepositoriesFeature+*.swift` extensions.
+
+### Terminal layering
+
+- **Value world**: `LayoutFeature` state holds panes, tabs, splits (`SplitTree`), selection and zoom — `ContentID`s only, no renderers.
+- **Reference world**: `WorktreeTerminalManager` (`@Observable`, `@MainActor`, not a reducer) owns one `WorktreeContentHost` per worktree and bridges back into TCA by pushing coalesced, deduped `TerminalClient.Event`s into the store. `ContentRuntime` is the process-wide dependency registry mapping `ContentID` → live `TabContent`.
+- `TabContent` (`Features/Terminal/Content/`) abstracts a tab's session — `startSession` / `hibernate` / `tearDown` / `snapshot` — and exposes anything the tab strip displays through observable `TabChrome`.
+
+### Clients (swift-dependencies)
+
+`supacode/Clients/*` wrap the outside world: `GitClient` (worktrees, status, branches), `GithubCLIClient` / `GithubIntegrationClient` (`gh` plus GraphQL PR state), `ZmxClient` (session daemon, OSC scanning, IPC framing), `TerminalClient`, `WorktreeInfoWatcherClient`, `DeeplinkClient`, `FileExplorerClient`, `UpdaterClient` (Sparkle), `WorkspaceClient`.
+
+### Control plane
+
+- `AgentHookSocketServer` listens on `/tmp/supacode-<uid>/pid-<pid>` for JSON `{"deeplink": …}` commands and `{"query": …}` reads from `supacode-cli`, which finds the socket through `$SUPACODE_SOCKET_PATH` (exported into every session) or by scanning live pids.
+- Agent presence and notifications do **not** use that socket: installed agent hooks emit OSC 3008 (`AgentPresenceOSC`), which also works over SSH.
+- Deeplinks (`supacode://…`) are the shared command vocabulary for the CLI, hotkeys, and other apps.
+
+### Persistence
+
+`~/.supacode/` (`SupacodePaths`) holds worktrees, per-repository settings, and layouts. Read them through `@Shared` keys (`.settingsFile`, `.repositorySettings(_:host:)`, the layout keys) rather than new dependency clients.
 
 ### Key Dependencies
 
 - **TCA (swift-composable-architecture)**: App state, reducers, side effects
 - **GhosttyKit**: Terminal emulator (built from Zig source in ThirdParty/ghostty)
 - **Sparkle**: Auto-update framework
-- **swift-dependencies**: Dependency injection for TCA clients
+- **swift-dependencies / Sharing**: Dependency injection and shared persisted state
+- **ArgumentParser**: `supacode-cli`
 - **PostHog**: Analytics
 - **Sentry**: Error tracking
 
@@ -32,6 +95,7 @@ Supacode is a macOS terminal emulator that for running multiple coding agents in
 - Avoid `GeometryReader` when `containerRelativeFrame()` or `visualEffect()` would work
 - Do not use NSNotification to communicate between reducers.
 - Prefer `@Shared` directly in reducers for app storage and shared settings; do not introduce new dependency clients solely to wrap `@Shared`.
+- SwiftLint runs with `strict: true` and two custom rules that fail the build: views must not mutate `store.…` directly (send actions), and `@Shared` / `@SharedReader` must not be constructed inside a view body, computed property, or function (references are cached weakly, so the key's disk read re-runs every evaluation) — hold it as a private stored property or resolve it in the reducer.
 - Use `SupaLogger` for all logging. Never use `print()` or `os.Logger` directly. `SupaLogger` prints in DEBUG and uses `os.Logger` in release.
 - Avoid top-level free functions. Default to `static` methods, computed properties, or instance methods on a relevant type (enum/struct/extension). Free functions pollute the module namespace, are harder to discover, and easily drift from the inline implementation a consumer ends up writing instead. If the operation is pure and stateless, make it a `static` on a caseless `enum` or the most relevant type, not a top-level `func`.
 - Closure-typed focused values invalidate the AppKit menu on every body run (closures have no Equatable conformance, so SwiftUI re-publishes every time). Always wrap menu-bar action closures with `FocusedAction<Input>` and publish via `.focusedSceneAction(_:enabled:token:perform:)` / `.focusedAction(_:enabled:token:perform:)`. The wrapper dedupes on `(isEnabled, token)`, so AppKit only rebuilds the menu when something the menu actually displays changes. Token rules in `App/Models/FocusedAction.swift`: set `token` to a hashable projection of any captured state that affects behavior; leave it `nil` when the closure captures only the store / `@State` bindings. Consumers should read the action with `@FocusedValue(\.x)` and gate with `action?.isEnabled != true`, not `action == nil`.
