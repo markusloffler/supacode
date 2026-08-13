@@ -107,69 +107,62 @@ struct WorktreeToolbarTitleView: View {
       titleRenderLogger.info("WorktreeToolbarTitleView.body re-rendered")
     #endif
     return HStack(spacing: 8) {
-      Group {
-        switch content {
-        case .folder:
-          Image(systemName: "folder")
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .padding(3)
-            .foregroundStyle(.secondary)
-            .accessibilityHidden(true)
-        case .git(let payload):
-          RepositoryOwnerAvatar(rootURL: payload.rootURL)
-        }
-      }
-      .frame(width: 24, height: 24)
-      VStack(alignment: .leading, spacing: 0) {
-        switch content {
-        case .folder(let name, let tint, let hostInfo):
-          HStack(spacing: 4) {
-            Text(name)
-              .appFont(.callout, weight: .semibold)
-              .foregroundStyle(tint?.color ?? .primary)
-              .lineLimit(1)
-              .truncationMode(.middle)
-            if let hostInfo {
-              Image(systemName: "wifi")
-                .imageScale(.small)
-                .foregroundStyle(.secondary)
-                .help(hostInfo)
-                .accessibilityHidden(true)
-            }
+      switch content {
+      case .folder(let name, let tint, let hostInfo):
+        Image(systemName: "folder")
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .padding(3)
+          .frame(width: 24, height: 24)
+          .foregroundStyle(.secondary)
+          .accessibilityHidden(true)
+        HStack(spacing: 4) {
+          Text(name)
+            .appFont(.callout, weight: .semibold)
+            .foregroundStyle(tint?.color ?? .primary)
+            .lineLimit(1)
+            .truncationMode(.middle)
+          if let hostInfo {
+            Image(systemName: "wifi")
+              .imageScale(.small)
+              .foregroundStyle(.secondary)
+              .help(hostInfo)
+              .accessibilityHidden(true)
           }
-        case .git(let payload):
+        }
+      case .git(let payload):
+        Text(payload.repositoryName)
+          .appFont(.headline, weight: .semibold)
+          .foregroundStyle(payload.repositoryColor?.color ?? .primary)
+          .lineLimit(1)
+          .truncationMode(.middle)
+        RepositoryOwnerAvatar(rootURL: payload.rootURL)
+          .frame(width: 24, height: 24)
+        let accentStyle = AnyShapeStyle(payload.accent.shapeStyle(emphasized: false))
+        let trail: Text? = payload.worktreeSubtitle.map { worktreeSubtitle in
+          Text("\(Text(" · ").foregroundStyle(.secondary))\(Text(worktreeSubtitle).foregroundStyle(accentStyle))")
+        }
+        HStack(spacing: 4) {
           Text(payload.displayTitle)
             .appFont(.callout, weight: .semibold)
             .foregroundStyle(payload.worktreeTint?.color ?? .primary)
             .lineLimit(1)
             .truncationMode(.middle)
-          let repoText = Text(payload.repositoryName)
-            .foregroundStyle(payload.repositoryColor?.color ?? .secondary)
-          let accentStyle = AnyShapeStyle(payload.accent.shapeStyle(emphasized: false))
-          let trail: Text? = payload.worktreeSubtitle.map { worktreeSubtitle in
-            Text("\(Text(" · ").foregroundStyle(.secondary))\(Text(worktreeSubtitle).foregroundStyle(accentStyle))")
+          if let hostInfo = payload.hostInfo {
+            Image(systemName: "wifi")
+              .imageScale(.small)
+              .foregroundStyle(.secondary)
+              .help(hostInfo)
+              .accessibilityHidden(true)
           }
-          HStack(spacing: 0) {
-            repoText
-            if let hostInfo = payload.hostInfo {
-              Image(systemName: "wifi")
-                .imageScale(.small)
-                .foregroundStyle(.secondary)
-                .help(hostInfo)
-                .accessibilityHidden(true)
-                .padding(.leading, 3)
-            }
-            if let trail {
-              trail
-            }
+          if let trail {
+            trail
+              .appFont(.footnote)
           }
-          .appFont(.footnote)
-          .lineLimit(1)
         }
       }
     }
-    .frame(maxWidth: 320, alignment: .leading)
+    .frame(maxWidth: 360, alignment: .leading)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityLabel)
   }
