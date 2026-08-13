@@ -686,6 +686,10 @@ struct WorktreeDetailView: View {
       ToolbarSpacer(.flexible)
 
       ToolbarItem {
+        favoriteEditorButtons
+      }
+
+      ToolbarItem {
         openMenu(openActionSelection: toolbarState.openActionSelection)
           // Rebuild the NSMenu when the host/selection changes so per-item
           // `.disabled` gates don't go stale across a worktree switch.
@@ -717,6 +721,27 @@ struct WorktreeDetailView: View {
         inspectorPresented: inspectorPresented,
         onActivateInspector: onActivateInspector
       )
+    }
+
+    /// Quick-launch buttons for the hardcoded `OpenWorktreeAction.favorites`, filtered
+    /// to what's installed. Each opens directly and never touches `openActionSelection`,
+    /// so the Open menu's primary action keeps reflecting the user's actual default.
+    @ViewBuilder
+    private var favoriteEditorButtons: some View {
+      let favorites = OpenWorktreeAction.favorites.filter { toolbarState.installedOpenActions.contains($0) }
+      if !favorites.isEmpty {
+        HStack(spacing: 0) {
+          ForEach(favorites) { action in
+            Button {
+              onOpenWorktree(action)
+            } label: {
+              OpenWorktreeActionIcon(action: action)
+            }
+            .help(openActionHelpText(for: action, isDefault: false))
+            .disabled(!toolbarState.canOpen(action))
+          }
+        }
+      }
     }
 
     @ViewBuilder

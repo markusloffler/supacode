@@ -426,6 +426,14 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
   public static let menuOrder: [OpenWorktreeAction] =
     editorPriority + [.xcode] + [.finder] + terminalPriority + gitClientPriority + [.editor]
 
+  /// Always shown as quick-launch buttons to the left of the toolbar's Open menu,
+  /// regardless of the user's default editor. Filtered to installed apps by the caller.
+  public static let favorites: [OpenWorktreeAction] = [
+    .vscode,
+    .xcode,
+    .typora,
+  ]
+
   public static func normalizedDefaultEditorID(
     _ settingsID: String?,
     installed: [OpenWorktreeAction]
