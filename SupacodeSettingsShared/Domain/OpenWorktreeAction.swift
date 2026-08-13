@@ -82,6 +82,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
   case sourcetree
   case sublimeMerge
   case terminal
+  case typora
   case vscode
   case vscodeInsiders
   case vscodium
@@ -123,6 +124,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     case .sourcetree: "Sourcetree"
     case .sublimeMerge: "Sublime Merge"
     case .terminal: "Terminal"
+    case .typora: "Typora"
     case .vscode: "VS Code"
     case .vscodeInsiders: "VS Code Insiders"
     case .vscodium: "VSCodium"
@@ -143,7 +145,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
   public var canOpenFiles: Bool {
     switch self {
     case .androidStudio, .antigravity, .cursor, .goland, .intellij, .intellijEAP, .nova,
-      .phpstorm, .pycharm, .rider, .rubymine, .rustrover, .trae, .traeCN, .vscode,
+      .phpstorm, .pycharm, .rider, .rubymine, .rustrover, .trae, .traeCN, .typora, .vscode,
       .vscodeInsiders, .vscodium, .webstorm, .windsurf, .xcode, .zed, .zedPreview:
       true
     case .alacritty, .editor, .finder, .fork, .githubDesktop, .gitkraken, .gitup, .ghostty,
@@ -159,8 +161,8 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     case .alacritty, .androidStudio, .antigravity, .cursor, .fork, .githubDesktop, .gitkraken,
       .gitup, .ghostty, .goland, .intellij, .intellijEAP, .kitty, .nova, .phpstorm, .pycharm,
       .rider, .rubymine, .rustrover, .smartgit, .sourcetree, .sublimeMerge, .terminal, .trae,
-      .traeCN, .vscode, .vscodeInsiders, .vscodium, .warp, .webstorm, .wezterm, .windsurf, .xcode,
-      .zed, .zedPreview:
+      .traeCN, .typora, .vscode, .vscodeInsiders, .vscodium, .warp, .webstorm, .wezterm, .windsurf,
+      .xcode, .zed, .zedPreview:
       title
     }
   }
@@ -209,6 +211,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     case .sourcetree: "sourcetree"
     case .sublimeMerge: "sublime-merge"
     case .terminal: "terminal"
+    case .typora: "typora"
     case .vscode: "vscode"
     case .vscodeInsiders: "vscode-insiders"
     case .vscodium: "vscodium"
@@ -251,6 +254,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     case .sourcetree: "com.torusknot.SourceTreeNotMAS"
     case .sublimeMerge: "com.sublimemerge"
     case .terminal: "com.apple.Terminal"
+    case .typora: "abnerworks.Typora"
     case .vscode: "com.microsoft.VSCode"
     case .vscodeInsiders: "com.microsoft.VSCodeInsiders"
     case .vscodium: "com.vscodium"
@@ -275,8 +279,8 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     case .alacritty, .androidStudio, .antigravity, .cursor, .editor, .finder, .fork, .githubDesktop,
       .gitkraken, .gitup, .ghostty, .goland, .intellij, .intellijEAP, .kitty, .nova, .phpstorm,
       .pycharm, .rider, .rubymine, .rustrover, .smartgit, .sourcetree, .sublimeMerge, .terminal,
-      .trae, .traeCN, .vscode, .vscodeInsiders, .vscodium, .warp, .webstorm, .wezterm, .windsurf,
-      .zed, .zedPreview:
+      .trae, .traeCN, .typora, .vscode, .vscodeInsiders, .vscodium, .warp, .webstorm, .wezterm,
+      .windsurf, .zed, .zedPreview:
       [.default]
     }
   }
@@ -304,7 +308,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
       ]
     case .alacritty, .antigravity, .cursor, .editor, .finder, .fork, .githubDesktop, .gitkraken, .gitup,
       .ghostty, .kitty, .nova, .smartgit, .sourcetree, .sublimeMerge, .terminal, .trae, .traeCN,
-      .vscode, .vscodeInsiders, .vscodium, .warp, .wezterm, .windsurf, .xcode:
+      .typora, .vscode, .vscodeInsiders, .vscodium, .warp, .wezterm, .windsurf, .xcode:
       [.default]
     }
   }
@@ -398,6 +402,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     .rustrover,
     .nova,
     .antigravity,
+    .typora,
   ]
   public static let terminalPriority: [OpenWorktreeAction] = [
     .ghostty,
