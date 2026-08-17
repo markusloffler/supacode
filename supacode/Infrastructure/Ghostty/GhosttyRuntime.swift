@@ -36,13 +36,17 @@ final class GhosttyRuntime {
   private var lastColorScheme: ghostty_color_scheme_e?
   /// Whether the user has toggled background opacity to force
   /// an opaque window, overriding the configured transparency.
+  /// Seeded from and persisted to `GlobalSettings.backgroundOpaqueOverride`.
   private(set) var isBackgroundOpaque = false
   /// User's intended `background-opacity` from their Ghostty config, used to
   /// tint the translucent window chrome behind the surfaces.
   private var userBackgroundOpacity: Double = 1
+  @Shared(.settingsFile) private var settingsFile: SettingsFile
 
   func toggleIsBackgroundOpaque() {
     isBackgroundOpaque.toggle()
+    let isOpaque = isBackgroundOpaque
+    $settingsFile.withLock { $0.global.backgroundOpaqueOverride = isOpaque }
   }
   var onConfigChange: (() -> Void)?
 
@@ -52,6 +56,7 @@ final class GhosttyRuntime {
     }
     self.config = loaded.config
     self.userBackgroundOpacity = loaded.userBackgroundOpacity
+    self.isBackgroundOpaque = settingsFile.global.backgroundOpaqueOverride
     let config = loaded.config
 
     var runtimeConfig = ghostty_runtime_config_s(
