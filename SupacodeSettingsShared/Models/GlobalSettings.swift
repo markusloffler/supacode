@@ -142,6 +142,10 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   /// Whether the optional `~/.supacode/ghostty.config` merges after the standard
   /// Ghostty config or replaces it. Inert until that file exists.
   public var ghosttyUserConfigMode: GhosttyUserConfigMode
+  /// User-toggled override that forces an opaque terminal background,
+  /// overriding the configured transparency. Set by the Ghostty
+  /// "toggle background opacity" command; survives restarts.
+  public var backgroundOpaqueOverride: Bool
   public var automatedActionPolicy: AutomatedActionPolicy
   public var autoDeleteArchivedWorktreesAfterDays: AutoDeletePeriod?
   public var shortcutOverrides: [AppShortcutID: AppShortcutOverride]
@@ -273,6 +277,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     terminalHibernationEnabled: Bool = true,
     chromeTextSize: ChromeTextSize = .default,
     automaticRepositoryRefreshEnabled: Bool = true,
+    backgroundOpaqueOverride: Bool = false,
     hoverFocusMode: HoverFocusMode = .never,
     globalToggleVisibilityHotkey: AppShortcutOverride? = nil
   ) {
@@ -320,6 +325,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.terminalHibernationEnabled = terminalHibernationEnabled
     self.chromeTextSize = chromeTextSize
     self.automaticRepositoryRefreshEnabled = automaticRepositoryRefreshEnabled
+    self.backgroundOpaqueOverride = backgroundOpaqueOverride
     self.hoverFocusMode = hoverFocusMode
     self.globalToggleVisibilityHotkey = globalToggleVisibilityHotkey
   }
@@ -543,7 +549,13 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     automaticRepositoryRefreshEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .automaticRepositoryRefreshEnabled)
       ?? Self.default.automaticRepositoryRefreshEnabled
-    // Decode the raw string so an unrecognized future mode falls back rather
+
+    // Pre-feature files omit this key; the override was never persisted before, so it defaults off.
+    backgroundOpaqueOverride =
+      try container.decodeIfPresent(Bool.self, forKey: .backgroundOpaqueOverride)
+      ?? Self.default.backgroundOpaqueOverride
+      // Decode the raw string so an unrecognized future mode falls back rather
+
     // than throwing (which would reset the whole file to defaults).
     hoverFocusMode =
       ((try? container.decodeIfPresent(String.self, forKey: .hoverFocusMode)) ?? nil)
