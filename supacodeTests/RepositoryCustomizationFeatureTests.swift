@@ -27,7 +27,7 @@ struct RepositoryCustomizationFeatureTests {
     await store.send(.saveButtonTapped)
     await store.receive(
       .delegate(
-        .save(repositoryID: "/tmp/repo", title: "Custom Title", color: .blue),
+        .save(repositoryID: "/tmp/repo", title: "Custom Title", color: .blue, workspace: nil),
       ))
   }
 
@@ -38,7 +38,7 @@ struct RepositoryCustomizationFeatureTests {
 
     await store.send(.saveButtonTapped)
     await store.receive(
-      .delegate(.save(repositoryID: "/tmp/repo", title: nil, color: nil)),
+      .delegate(.save(repositoryID: "/tmp/repo", title: nil, color: nil, workspace: nil)),
     )
   }
 
@@ -50,7 +50,7 @@ struct RepositoryCustomizationFeatureTests {
 
     await store.send(.saveButtonTapped)
     await store.receive(
-      .delegate(.save(repositoryID: "/tmp/repo", title: "repo", color: nil)),
+      .delegate(.save(repositoryID: "/tmp/repo", title: "repo", color: nil, workspace: nil)),
     )
   }
 

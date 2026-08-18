@@ -90,7 +90,7 @@ struct RepositoriesFeatureCustomizationTests {
       .repositoryCustomization(
         .presented(
           .delegate(
-            .save(repositoryID: repoID, title: "Renamed", color: .red),
+            .save(repositoryID: repoID, title: "Renamed", color: .red, workspace: nil),
           ))),
     ) {
       $0.repositoryCustomization = nil

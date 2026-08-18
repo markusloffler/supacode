@@ -680,7 +680,7 @@ struct AppFeature {
       // `core` runs before the child reducer applies the save, hence the
       // explicit title override.
       case .repositories(
-        .repositoryCustomization(.presented(.delegate(.save(let repositoryID, let title, _))))
+        .repositoryCustomization(.presented(.delegate(.save(let repositoryID, let title, _, _))))
       ):
         return .send(
           .settings(

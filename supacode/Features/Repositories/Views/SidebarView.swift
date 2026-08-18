@@ -16,11 +16,18 @@ struct SidebarView: View {
     let archiveTargets = state.sidebarSelectionSlice.archiveTargets
     let deleteTargets = state.sidebarSelectionSlice.deleteTargets
     let openRepo = AppShortcuts.openRepository.effective(from: settingsFile.global.shortcutOverrides)
+    // Reducer-cached. `nextWorkspace` is both the enablement gate (nil when no
+    // repository is filed under a workspace) and the token, so the menu only
+    // rebuilds when the destination the item would jump to actually changes.
+    let nextWorkspace = state.sidebarStructure.workspaces.nextWorkspace
 
     return SidebarListView(
       store: store,
       terminalManager: terminalManager
     )
+    .safeAreaInset(edge: .top, spacing: 0) {
+      SidebarWorkspacePickerView(store: store)
+    }
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         Menu {
@@ -62,6 +69,13 @@ struct SidebarView: View {
     }
     .sheet(item: $store.scope(state: \.cloneRepositoryForm, action: \.cloneRepositoryForm)) { formStore in
       CloneRepositoryFormView(store: formStore)
+    }
+    .focusedSceneAction(
+      \.cycleWorkspaceAction,
+      enabled: nextWorkspace != nil,
+      token: nextWorkspace
+    ) {
+      store.send(.cycleSidebarWorkspace)
     }
     .focusedSceneAction(
       \.confirmWorktreeAction,

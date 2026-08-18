@@ -9,6 +9,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
   case commandPalette, worktreeSwitcher, openSettings, checkForUpdates, showMainWindow
   case toggleLeftSidebar, revealInSidebar
   case expandAllSidebarGroups, collapseAllSidebarGroups
+  case cycleWorkspace
   case newWorktree, refreshWorktrees, archivedWorktrees, archiveWorktree
   case deleteWorktree, confirmWorktreeAction
   case selectNextWorktree, selectPreviousWorktree
@@ -54,6 +55,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .revealInSidebar: "revealInSidebar"
     case .expandAllSidebarGroups: "expandAllSidebarGroups"
     case .collapseAllSidebarGroups: "collapseAllSidebarGroups"
+    case .cycleWorkspace: "cycleWorkspace"
     case .newWorktree: "newWorktree"
     case .refreshWorktrees: "refreshWorktrees"
     case .archivedWorktrees: "archivedWorktrees"
@@ -112,6 +114,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     "revealInSidebar": .revealInSidebar,
     "expandAllSidebarGroups": .expandAllSidebarGroups,
     "collapseAllSidebarGroups": .collapseAllSidebarGroups,
+    "cycleWorkspace": .cycleWorkspace,
     "newWorktree": .newWorktree,
     "refreshWorktrees": .refreshWorktrees,
     "archivedWorktrees": .archivedWorktrees,
@@ -187,6 +190,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .revealInSidebar: "Reveal in Sidebar"
     case .expandAllSidebarGroups: "Expand All Sidebar Groups"
     case .collapseAllSidebarGroups: "Collapse All Sidebar Groups"
+    case .cycleWorkspace: "Next Workspace"
     case .newWorktree: "New Worktree"
     case .refreshWorktrees: "Refresh Worktrees"
     case .archivedWorktrees: "Archived Worktrees"
@@ -467,6 +471,10 @@ public enum AppShortcuts {
   public static let collapseAllSidebarGroups = AppShortcut(
     id: .collapseAllSidebarGroups, key: "[", modifiers: [.command, .control]
   )
+  /// Advances the sidebar's workspace filter to the next number in use,
+  /// wrapping at the end. Deliberately never lands on "All Workspaces": the
+  /// picker is the way back to unfiltered.
+  public static let cycleWorkspace = AppShortcut(id: .cycleWorkspace, key: "t", modifiers: [.command, .option])
 
   public static let newWorktree = AppShortcut(id: .newWorktree, key: "n", modifiers: .command)
   public static let refreshWorktrees = AppShortcut(id: .refreshWorktrees, key: "r", modifiers: [.command, .shift])
@@ -643,7 +651,10 @@ public enum AppShortcuts {
     ),
     AppShortcutGroup(
       category: .sidebar,
-      shortcuts: [toggleLeftSidebar, revealInSidebar, expandAllSidebarGroups, collapseAllSidebarGroups]
+      shortcuts: [
+        toggleLeftSidebar, revealInSidebar, expandAllSidebarGroups, collapseAllSidebarGroups,
+        cycleWorkspace,
+      ]
     ),
     AppShortcutGroup(
       category: .worktrees,
