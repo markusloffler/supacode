@@ -2,6 +2,20 @@ import Foundation
 import OrderedCollections
 import SupacodeSettingsShared
 
+/// The nine numbered sidebar workspaces a repository section can be assigned
+/// to. A section with no assignment (`SidebarState.Section.workspace == nil`)
+/// reads as "All workspaces" and stays visible whichever workspace the sidebar
+/// filters on, so the feature is invisible until the user opts a section into it.
+nonisolated enum SidebarWorkspace {
+  /// Assignable workspace numbers, ascending. Also the picker's entry order.
+  static let numbers = Array(1...9)
+
+  /// Whether `value` is an assignable workspace number. Used to drop an
+  /// out-of-range value from a hand-edited or downgraded persisted blob
+  /// rather than letting it filter every section out of the sidebar.
+  static func isValid(_ value: Int) -> Bool { numbers.contains(value) }
+}
+
 /// User-curated sidebar state persisted to `~/.supacode/sidebar.json`.
 ///
 /// The shape mirrors the rendered tree: the root holds sections (one
@@ -98,17 +112,23 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
     /// Optional user-supplied tint applied to the sidebar header.
     /// `nil` means "default / no tint".
     var color: RepositoryColor?
+    /// Workspace this section is filed under, one of `SidebarWorkspace.numbers`.
+    /// `nil` means "All workspaces": the section shows no matter which
+    /// workspace the sidebar is filtered to.
+    var workspace: Int?
 
     init(
       collapsed: Bool = false,
       buckets: OrderedDictionary<BucketID, Bucket> = [:],
       title: String? = nil,
-      color: RepositoryColor? = nil
+      color: RepositoryColor? = nil,
+      workspace: Int? = nil
     ) {
       self.collapsed = collapsed
       self.buckets = buckets
       self.title = title
       self.color = color
+      self.workspace = workspace
     }
 
     private enum SectionCodingKeys: String, CodingKey {
@@ -116,6 +136,7 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
       case buckets
       case title
       case color
+      case workspace
     }
 
     init(from decoder: any Decoder) throws {
@@ -131,6 +152,10 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
         ) ?? [:]
       self.title = try container.decodeIfPresent(String.self, forKey: .title)
       self.color = try container.decodeIfPresent(RepositoryColor.self, forKey: .color)
+      // Drop an out-of-range workspace (hand-edit, downgrade) rather than
+      // letting it hide the section behind a number the picker never offers.
+      let decodedWorkspace = try container.decodeIfPresent(Int.self, forKey: .workspace)
+      self.workspace = decodedWorkspace.flatMap { SidebarWorkspace.isValid($0) ? $0 : nil }
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -143,6 +168,7 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
       // stays clean for repos the user never touched.
       try container.encodeIfPresent(title, forKey: .title)
       try container.encodeIfPresent(color, forKey: .color)
+      try container.encodeIfPresent(workspace, forKey: .workspace)
     }
   }
 

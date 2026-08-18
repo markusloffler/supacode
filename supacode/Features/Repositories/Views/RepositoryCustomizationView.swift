@@ -18,6 +18,13 @@ struct RepositoryCustomizationView: View {
         LabeledContent("Color") {
           ColorSwatchRow(color: $store.color)
         }
+        Picker("Workspace", selection: $store.workspace) {
+          Text("All Workspaces").tag(Int?.none)
+          ForEach(SidebarWorkspace.numbers, id: \.self) { number in
+            Text(number.formatted()).tag(Int?.some(number))
+          }
+        }
+        .help("Show this repository only while the sidebar is filtered to this workspace")
       } header: {
         Text("Customize Appearance")
         Text("Override the sidebar title and tint for `\(store.defaultName)`.")

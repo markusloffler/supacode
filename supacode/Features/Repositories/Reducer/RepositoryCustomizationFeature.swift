@@ -10,6 +10,8 @@ struct RepositoryCustomizationFeature {
     let defaultName: String
     var title: String
     var color: RepositoryColor?
+    /// Workspace the section is filed under; `nil` is "All workspaces".
+    var workspace: Int?
   }
 
   enum Action: BindableAction, Equatable {
@@ -22,7 +24,7 @@ struct RepositoryCustomizationFeature {
   @CasePathable
   enum Delegate: Equatable {
     case cancel
-    case save(repositoryID: Repository.ID, title: String?, color: RepositoryColor?)
+    case save(repositoryID: Repository.ID, title: String?, color: RepositoryColor?, workspace: Int?)
   }
 
   var body: some Reducer<State, Action> {
@@ -44,7 +46,10 @@ struct RepositoryCustomizationFeature {
             .save(
               repositoryID: state.repositoryID,
               title: resolvedTitle,
-              color: state.color
+              color: state.color,
+              // Guard the picker's value so a future non-UI writer can't file
+              // the section under a workspace the sidebar never offers.
+              workspace: state.workspace.flatMap { SidebarWorkspace.isValid($0) ? $0 : nil }
             )
           )
         )
