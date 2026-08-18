@@ -203,6 +203,35 @@ struct SidebarHoistSummary: Equatable, Sendable {
 /// `RepositoriesFeature.State.sidebarStructure`; the view walks `sections`
 /// and does no layout calculation itself.
 struct SidebarStructure: Equatable, Sendable {
+  /// Payload behind the sidebar's workspace picker. Precomputed here rather
+  /// than derived in the view so the picker costs nothing per body run and
+  /// can't observation-track the repository roster.
+  struct WorkspaceSelector: Equatable, Sendable {
+    /// Workspace numbers at least one live repository section is filed under,
+    /// ascending. Empty means nothing is filed anywhere, and the picker hides.
+    var available: [Int]
+    /// Effective filter, `nil` meaning "All workspaces". Never a number outside
+    /// `available`: a selection whose last section was reassigned falls back to
+    /// "All workspaces" instead of leaving the sidebar filtered to nothing.
+    var selected: Int?
+
+    static let empty = WorkspaceSelector(available: [], selected: nil)
+
+    var isVisible: Bool { !available.isEmpty }
+
+    /// Where ⌥⌘T goes from here: the next number in use, wrapping past the
+    /// end, or the first one when the sidebar is currently unfiltered. `nil`
+    /// when the jump would be a no-op — nothing is filed anywhere, or the one
+    /// workspace in use is already selected — so the menu item disables rather
+    /// than looking live while doing nothing.
+    var nextWorkspace: Int? {
+      guard let first = available.first else { return nil }
+      guard let selected, let index = available.firstIndex(of: selected) else { return first }
+      let next = available[(index + 1) % available.count]
+      return next == selected ? nil : next
+    }
+  }
+
   enum HighlightKind: String, Equatable, Sendable {
     case pinned
     case active
@@ -287,6 +316,8 @@ struct SidebarStructure: Equatable, Sendable {
   /// this to translate `.onMove` flat offsets into the index space the
   /// `.repositoriesMoved` reducer action expects.
   var reorderableRepositoryIDs: [Repository.ID]
+  /// Entries and current selection for the sidebar's workspace picker.
+  var workspaces: WorkspaceSelector
 
   static let empty = SidebarStructure(
     sections: [],
@@ -295,7 +326,8 @@ struct SidebarStructure: Equatable, Sendable {
     slotByID: [:],
     repositoryHighlightByID: [:],
     hoistSummaryByRepositoryID: [:],
-    reorderableRepositoryIDs: []
+    reorderableRepositoryIDs: [],
+    workspaces: .empty
   )
 
   /// First-frame value used before the reducer recomputes. Surfaces the
@@ -308,7 +340,8 @@ struct SidebarStructure: Equatable, Sendable {
     slotByID: [:],
     repositoryHighlightByID: [:],
     hoistSummaryByRepositoryID: [:],
-    reorderableRepositoryIDs: []
+    reorderableRepositoryIDs: [],
+    workspaces: .empty
   )
 }
 
@@ -446,6 +479,9 @@ extension RepositoriesFeature.Action {
     // Sidebar layout toggles only. `setMoveNotifiedWorktreeToTop` re-sorts the
     // highlight sections (unread float), so a runtime toggle must recompute.
     case .sidebarGroupingTogglesChanged, .sidebarNestByBranchChanged,
+      // The workspace filter decides which repository sections (and which of
+      // their hoisted rows) the structure carries at all.
+      .setSidebarWorkspace, .cycleSidebarWorkspace,
       .repositoryExpansionChanged, .branchNestExpansionChanged,
       .setAllSidebarGroupsExpanded,
       .setMoveNotifiedWorktreeToTop,
@@ -659,10 +695,16 @@ extension RepositoriesFeature.State {
   /// candidate filter. The optional `archived` parameter lets a caller share
   /// an already-computed set with the aggregator so the O(R) walk runs once
   /// per call body, not twice.
-  func orderedHighlightPinnedIDs(archived: Set<Worktree.ID>? = nil) -> [SidebarItemID] {
+  /// `restrictedTo` is the workspace filter's visible repository set, or `nil`
+  /// for "no restriction".
+  func orderedHighlightPinnedIDs(
+    archived: Set<Worktree.ID>? = nil,
+    restrictedTo visibleRepositoryIDs: Set<Repository.ID>? = nil
+  ) -> [SidebarItemID] {
     let archivedSet = archived ?? archivedWorktreeIDSet
     var ids: [SidebarItemID] = []
     for repoID in orderedRepositoryIDs() {
+      if let visibleRepositoryIDs, !visibleRepositoryIDs.contains(repoID) { continue }
       guard let repository = repositories[id: repoID] else { continue }
       let isGit = repository.isGitRepository
       for worktreeID in sidebar.sections[repoID]?.buckets[.pinned]?.items.keys ?? [] {
@@ -710,12 +752,22 @@ extension RepositoriesFeature.State {
         slotByID: [:],
         repositoryHighlightByID: [:],
         hoistSummaryByRepositoryID: [:],
-        reorderableRepositoryIDs: []
+        reorderableRepositoryIDs: [],
+        workspaces: .empty
       )
     }
 
-    let hoists = computeHighlightHoists(groupPinned: groupPinned, groupActive: groupActive)
-    let repoSections = buildRepositorySections(hoisted: hoists.hoistedSet)
+    let workspaces = computeWorkspaceSelector()
+    let visibleRepositoryIDs = workspaceVisibleRepositoryIDs(for: workspaces.selected)
+    let hoists = computeHighlightHoists(
+      groupPinned: groupPinned,
+      groupActive: groupActive,
+      restrictedTo: visibleRepositoryIDs
+    )
+    let repoSections = buildRepositorySections(
+      hoisted: hoists.hoistedSet,
+      restrictedTo: visibleRepositoryIDs
+    )
 
     var sections: [SidebarStructure.Section] = []
     if !hoists.pinned.isEmpty {
@@ -745,15 +797,50 @@ extension RepositoriesFeature.State {
       slotByID: hotkey.slotByID,
       repositoryHighlightByID: highlightProjections.tags,
       hoistSummaryByRepositoryID: highlightProjections.summaries,
-      reorderableRepositoryIDs: repoSections.reorderableRepositoryIDs
+      reorderableRepositoryIDs: repoSections.reorderableRepositoryIDs,
+      workspaces: workspaces
+    )
+  }
+
+  /// Entries and effective selection for the sidebar's workspace picker.
+  /// `available` is built from the live repository roster, so a section left
+  /// behind by a removed repository can't keep a number in the menu, and a
+  /// selection that drops out of `available` degrades to "All workspaces".
+  func computeWorkspaceSelector() -> SidebarStructure.WorkspaceSelector {
+    var assigned: Set<Int> = []
+    for repositoryID in orderedRepositoryIDs() {
+      if let workspace = sidebar.sections[repositoryID]?.workspace, SidebarWorkspace.isValid(workspace) {
+        assigned.insert(workspace)
+      }
+    }
+    let available = assigned.sorted()
+    return SidebarStructure.WorkspaceSelector(
+      available: available,
+      selected: available.contains(sidebarSelectedWorkspace) ? sidebarSelectedWorkspace : nil
+    )
+  }
+
+  /// Repository ids the sidebar renders under `workspace`: the ones filed
+  /// under it plus every unassigned ("All workspaces") one. `nil` — the
+  /// unfiltered case — means "every repository", so callers can skip the
+  /// membership test entirely.
+  private func workspaceVisibleRepositoryIDs(for workspace: Int?) -> Set<Repository.ID>? {
+    guard let workspace else { return nil }
+    return Set(
+      orderedRepositoryIDs().filter { repositoryID in
+        let assigned = sidebar.sections[repositoryID]?.workspace
+        return assigned == nil || assigned == workspace
+      }
     )
   }
 
   /// Pinned and Active hoists computed as if both sidebar grouping toggles were
   /// enabled, so the menu bar always lists them regardless of the user's sidebar
   /// grouping preference. Carries their union for the menu's Unread dedupe.
+  /// The menu bar is a global surface, so it deliberately passes no workspace
+  /// restriction: filtering the sidebar shouldn't hide rows from the menu.
   func menuBarForcedHoists() -> HighlightHoists {
-    computeHighlightHoists(groupPinned: true, groupActive: true)
+    computeHighlightHoists(groupPinned: true, groupActive: true, restrictedTo: nil)
   }
 
   /// Hoisted-row payload for one highlight-hoist pass (the sidebar structure
@@ -764,11 +851,19 @@ extension RepositoriesFeature.State {
     var hoistedSet: Set<Worktree.ID>
   }
 
-  private func computeHighlightHoists(groupPinned: Bool, groupActive: Bool) -> HighlightHoists {
+  /// `restrictedTo` is the workspace filter's visible repository set, or `nil`
+  /// for "no restriction". Rows from a hidden repository are dropped before
+  /// ordering, so a filtered sidebar's Pinned / Active sections only surface
+  /// rows the user could also reach in their own section.
+  private func computeHighlightHoists(
+    groupPinned: Bool,
+    groupActive: Bool,
+    restrictedTo visibleRepositoryIDs: Set<Repository.ID>?
+  ) -> HighlightHoists {
     let archived = archivedWorktreeIDSet
     let pinned: [Worktree.ID]
     if groupPinned {
-      let pinnedIDs = orderedHighlightPinnedIDs(archived: archived)
+      let pinnedIDs = orderedHighlightPinnedIDs(archived: archived, restrictedTo: visibleRepositoryIDs)
       pinned = orderedHighlightCandidates(forPinned: true, candidateIDs: pinnedIDs, excluding: [])
     } else {
       pinned = []
@@ -780,6 +875,7 @@ extension RepositoriesFeature.State {
       let candidateIDs = sidebarItems.ids.filter { id in
         guard !archived.contains(id) else { return false }
         guard let item = sidebarItems[id: id] else { return false }
+        if let visibleRepositoryIDs, !visibleRepositoryIDs.contains(item.repositoryID) { return false }
         // Terminating rows already signal their wind-down inline.
         guard !item.lifecycle.isTerminating else { return false }
         // Orphan rows have no working dir for the agent/script badge to act on.
@@ -803,7 +899,15 @@ extension RepositoriesFeature.State {
     var reorderableRepositoryIDs: [Repository.ID]
   }
 
-  private func buildRepositorySections(hoisted: Set<Worktree.ID>) -> RepositorySectionsBuild {
+  /// `restrictedTo` is the workspace filter's visible repository set, or `nil`
+  /// for "no restriction". Filtered-out repositories still land in
+  /// `reorderableRepositoryIDs` — that list is the drag translation's index
+  /// space and must stay 1:1 with `orderedRepositoryIDs()`, or a reorder made
+  /// while filtered would move the wrong repository.
+  private func buildRepositorySections(
+    hoisted: Set<Worktree.ID>,
+    restrictedTo visibleRepositoryIDs: Set<Repository.ID>?
+  ) -> RepositorySectionsBuild {
     var sections: [SidebarStructure.Section] = []
     var reorderableRepositoryIDs: [Repository.ID] = []
     let blockedRepositoryIDs = environmentBlockedRepositoryIDs
@@ -828,6 +932,7 @@ extension RepositoriesFeature.State {
     // so the offset-based `.repositoriesMoved` move maps cleanly back.
     for repositoryID in orderedRepositoryIDs() {
       reorderableRepositoryIDs.append(repositoryID)
+      if let visibleRepositoryIDs, !visibleRepositoryIDs.contains(repositoryID) { continue }
       let repository = repositories[id: repositoryID]
       let isRemote = repository?.host != nil
 

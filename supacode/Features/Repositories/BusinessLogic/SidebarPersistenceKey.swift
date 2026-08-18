@@ -95,3 +95,14 @@ nonisolated extension SharedReaderKey where Self == AppStorageKey<Bool>.Default 
     Self[.appStorage("sidebarGroupActiveRows"), default: true]
   }
 }
+
+nonisolated extension SharedReaderKey where Self == AppStorageKey<Int>.Default {
+  /// Workspace the sidebar is currently filtered to, one of
+  /// `SidebarWorkspace.numbers`. `0` — the default — means "All workspaces".
+  /// A plain `Int` rather than `Int?` because `AppStorage` has no optional
+  /// integer representation; `SidebarWorkspace.isValid` is the only gate that
+  /// turns the stored value into a live filter.
+  static var sidebarSelectedWorkspace: Self {
+    Self[.appStorage("sidebarSelectedWorkspace"), default: 0]
+  }
+}

@@ -245,6 +245,12 @@ struct RepositoriesFeature {
     /// State so the reducer's hotkey / arrow navigation walks the same
     /// trie-filtered row list the sidebar actually renders.
     @Shared(.sidebarNestWorktreesByBranch) var sidebarNestWorktreesByBranch: Bool
+    /// Workspace the sidebar is filtered to, `0` meaning "All workspaces".
+    /// Owned by State so the structure recompute and the picker read the same
+    /// persisted value. Read it through `computeWorkspaceSelector()` rather
+    /// than directly: that also drops a selection no live section is filed
+    /// under, so a reassigned-away number degrades to "All workspaces".
+    @Shared(.sidebarSelectedWorkspace) var sidebarSelectedWorkspace: Int
     /// Single source of truth the sidebar view renders against. Recomputed
     /// inside the reducer (see `recomputeSidebarStructureIfChanged()`) so
     /// `SidebarListView.body` is a dumb iterator. The Equatable diff guard
@@ -354,6 +360,14 @@ struct RepositoriesFeature {
     /// sort that nesting forces shows up in `slotByID` / `hotkeySlots` (which
     /// the view reads to assign ⌃1..⌃0 hotkeys).
     case sidebarNestByBranchChanged
+    /// Sent by the sidebar's workspace picker. `nil` selects "All workspaces";
+    /// a number filters the sidebar down to the sections filed under it plus
+    /// every unassigned one.
+    case setSidebarWorkspace(Int?)
+    /// ⌥⌘T. Advances to the next workspace in use, wrapping at the end, and
+    /// enters the first one when the sidebar is currently unfiltered. Never
+    /// selects "All Workspaces" — the picker is the way back out.
+    case cycleSidebarWorkspace
     case setOpenPanelPresented(Bool)
     case requestAddRemoteRepository
     case requestEditRemoteRepository(Repository.ID)
@@ -3297,6 +3311,21 @@ struct RepositoriesFeature {
         // lands in `slotByID` / `hotkeySlots`.
         return .none
 
+      case .setSidebarWorkspace(let workspace):
+        // `0` is the stored form of "All workspaces"; anything outside the
+        // assignable range collapses to it rather than emptying the sidebar.
+        let resolved = workspace.flatMap { SidebarWorkspace.isValid($0) ? $0 : nil } ?? 0
+        repositoriesLogger.debug("[USER] Selected sidebar workspace \(resolved)")
+        state.$sidebarSelectedWorkspace.withLock { $0 = resolved }
+        return .none
+
+      case .cycleSidebarWorkspace:
+        let selector = state.computeWorkspaceSelector()
+        guard let next = selector.nextWorkspace else { return .none }
+        repositoriesLogger.debug("[USER] Cycled sidebar workspace to \(next)")
+        state.$sidebarSelectedWorkspace.withLock { $0 = next }
+        return .none
+
       case .setOpenPanelPresented(let isPresented):
         state.isOpenPanelPresented = isPresented
         return .none
@@ -4331,7 +4360,8 @@ struct RepositoriesFeature {
           repositoryID: repositoryID,
           defaultName: repository.name,
           title: storedTitle,
-          color: storedColor
+          color: storedColor,
+          workspace: section?.workspace
         )
         return .none
 
@@ -4339,10 +4369,13 @@ struct RepositoriesFeature {
         state.repositoryCustomization = nil
         return .none
 
-      case .repositoryCustomization(.presented(.delegate(.save(let repositoryID, let title, let color)))):
+      case .repositoryCustomization(
+        .presented(.delegate(.save(let repositoryID, let title, let color, let workspace)))
+      ):
         state.$sidebar.withLock { sidebar in
           sidebar.sections[repositoryID, default: .init()].title = title
           sidebar.sections[repositoryID, default: .init()].color = color
+          sidebar.sections[repositoryID, default: .init()].workspace = workspace
         }
         state.repositoryCustomization = nil
         return .none

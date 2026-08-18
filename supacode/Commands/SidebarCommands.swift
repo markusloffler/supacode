@@ -8,6 +8,7 @@ struct SidebarCommands: Commands {
   @FocusedValue(\.expandAllSidebarGroupsAction) private var expandAllSidebarGroupsAction
   @FocusedValue(\.collapseAllSidebarGroupsAction) private var collapseAllSidebarGroupsAction
   @FocusedValue(\.toggleInspectorPaneAction) private var toggleInspectorPaneAction
+  @FocusedValue(\.cycleWorkspaceAction) private var cycleWorkspaceAction
   @Shared(.settingsFile) private var settingsFile
   @Shared(.appStorage("worktreeRowHideSubtitleOnMatch")) private var hideSubtitleOnMatch = true
   @Shared(.sidebarNestWorktreesByBranch) private var nestWorktreesByBranch: Bool
@@ -23,6 +24,7 @@ struct SidebarCommands: Commands {
     let togglePullRequestInspector = AppShortcuts.togglePullRequestInspector.effective(from: overrides)
     let toggleFilesInspector = AppShortcuts.toggleFilesInspector.effective(from: overrides)
     let toggleNotificationsInspector = AppShortcuts.toggleNotificationsInspector.effective(from: overrides)
+    let cycleWorkspace = AppShortcuts.cycleWorkspace.effective(from: overrides)
     CommandGroup(replacing: .sidebar) {
       Button("Toggle Left Sidebar", systemImage: "sidebar.leading") {
         toggleLeftSidebarAction?()
@@ -71,6 +73,14 @@ struct SidebarCommands: Commands {
         .disabled(toggleInspectorPaneAction?.isEnabled != true)
       }
       Section {
+        Button("Next Workspace", systemImage: "square.stack") {
+          cycleWorkspaceAction?()
+        }
+        .appKeyboardShortcut(cycleWorkspace)
+        .help("Filter the sidebar to the next workspace in use (\(cycleWorkspace?.display ?? "none"))")
+        .disabled(cycleWorkspaceAction?.isEnabled != true)
+      }
+      Section {
         Menu("Group Relevant Sidebar Rows") {
           Toggle("Group Pinned Rows", isOn: Binding($groupPinnedRows))
           Toggle("Group Active Rows", isOn: Binding($groupActiveRows))
@@ -102,6 +112,10 @@ private struct ToggleInspectorPaneActionKey: FocusedValueKey {
   typealias Value = FocusedAction<WorktreeInspectorPane>
 }
 
+private struct CycleWorkspaceActionKey: FocusedValueKey {
+  typealias Value = FocusedAction<Void>
+}
+
 extension FocusedValues {
   var toggleLeftSidebarAction: FocusedAction<Void>? {
     get { self[ToggleLeftSidebarActionKey.self] }
@@ -126,5 +140,10 @@ extension FocusedValues {
   var toggleInspectorPaneAction: FocusedAction<WorktreeInspectorPane>? {
     get { self[ToggleInspectorPaneActionKey.self] }
     set { self[ToggleInspectorPaneActionKey.self] = newValue }
+  }
+
+  var cycleWorkspaceAction: FocusedAction<Void>? {
+    get { self[CycleWorkspaceActionKey.self] }
+    set { self[CycleWorkspaceActionKey.self] = newValue }
   }
 }
