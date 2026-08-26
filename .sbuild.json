@@ -1,0 +1,37 @@
+{
+  "tool": "auto",
+  "action": "build",
+  "base": [],
+  "workspace": "supacode.xcworkspace",
+  "selectable": {
+    "scheme": {
+      "flag": "-scheme",
+      "allow": [
+        "Generate Project",
+        "GhosttyKit",
+        "supacode",
+        "supacode_SupacodeSettingsShared",
+        "supacode-cli",
+        "supacode-tests",
+        "supacode-Workspace",
+        "supacodeFeatureTests",
+        "supacodeGitTests",
+        "SupacodeSettingsFeature",
+        "SupacodeSettingsShared",
+        "supacodeTerminalTests"
+      ]
+    },
+    "destination": {
+      "flag": "-destination",
+      "allow": [
+        "mac"
+      ],
+      "map": {
+        "mac": "platform=macOS"
+      },
+      "default": "mac"
+    }
+  },
+  "gatedGlobs": [],
+  "autoSafeGlobs": []
+}
