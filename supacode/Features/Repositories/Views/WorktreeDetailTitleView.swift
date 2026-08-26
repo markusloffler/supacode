@@ -118,7 +118,7 @@ struct WorktreeToolbarTitleView: View {
           .accessibilityHidden(true)
         HStack(spacing: 4) {
           Text(name)
-            .appFont(.callout, weight: .semibold)
+            .appFont(.title2, weight: .semibold)
             .foregroundStyle(tint?.color ?? .primary)
             .lineLimit(1)
             .truncationMode(.middle)
@@ -132,7 +132,7 @@ struct WorktreeToolbarTitleView: View {
         }
       case .git(let payload):
         Text(payload.repositoryName)
-          .appFont(.headline, weight: .semibold)
+          .appFont(.title2, weight: .semibold)
           .foregroundStyle(payload.repositoryColor?.color ?? .primary)
           .lineLimit(1)
           .truncationMode(.middle)
