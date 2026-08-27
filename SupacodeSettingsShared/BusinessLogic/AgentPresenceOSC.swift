@@ -190,19 +190,36 @@ public nonisolated enum AgentPresenceOSC {
   }
 
   /// Shell that resolves `$__ppid` (the hook's parent agent) and its `$__tty`, since
-  /// hooks run with no controlling terminal and `ps` reports a bare tty name (`??`
-  /// falls back to `/dev/tty`). `set -f` is load-bearing: that `??` is a glob.
+  /// hooks run with no controlling terminal and `ps` reports a bare tty name.
+  /// `set -f` is load-bearing: `ps` prints `??` for a parent with no controlling
+  /// terminal, and that `??` is a glob.
   ///
   /// Neither `ps -o ppid= -p $$` (Grok collapses `$$` to a bare `$` when it rewrites
   /// the command) nor a bare `$PPID` (Grok preflights it as required env and skips
   /// the hook, #704) works; only the `:-` form survives to the runtime shell.
-  /// A ppid of 0 or 1 is dropped: `kill(1, 0)`'s `EPERM` reads as alive to the
-  /// liveness sweep and would pin the badge until surface close.
+  /// A ppid of 0 or 1 is dropped up front: `kill(1, 0)`'s `EPERM` reads as alive to
+  /// the liveness sweep and would pin the badge until surface close, and it also
+  /// keeps both lookups off pid 0/1.
+  ///
+  /// `lsof` is the second stage, not redundancy: `/bin/ps` is setuid-root, and macOS
+  /// seatbelt refuses to `exec` a setuid binary from a sandboxed process (`EPERM`),
+  /// so an agent running under an OS-level sandbox (Anthropic's sandbox-runtime /
+  /// `srt`, via launchers like `sclaude`) resolves no tty at all through `ps`. `lsof`
+  /// is not setuid and reads the parent's fds fine there. Writing to the resolved
+  /// `/dev/ttysNNN` is itself permitted under those sandboxes, so tty discovery was
+  /// the only broken link. fds 0,1,2 are all probed because a launcher may leave
+  /// stdout a pipe while stdin or stderr is still the tty.
+  ///
+  /// `/dev/tty` stays as the last resort for hosts without `lsof`; it is `ENXIO` when
+  /// the hook has no controlling terminal, which is the case that lands here.
   static let ttyResolveSnippet =
-    #"__ppid=${PPID:-}; "#
+    #"__ppid=${PPID:-}; case "$__ppid" in 0|1) __ppid="";; esac; "#
     + #"set -f; set -- $(ps -o tty= -p "$__ppid" 2>/dev/null); __tty=${1:-}; set +f; "#
-    + #"case "$__ppid" in 0|1) __ppid="";; esac; "#
-    + #"case "$__tty" in *[0-9]*) __tty="/dev/${__tty#/dev/}";; *) __tty="/dev/tty";; esac"#
+    + #"case "$__tty" in *[0-9]*) __tty="/dev/${__tty#/dev/}";; *) __tty="";; esac; "#
+    + #"[ -z "$__tty" ] && [ -n "$__ppid" ] && "#
+    + #"__tty=$(lsof -p "$__ppid" -a -d 0,1,2 -Fn 2>/dev/null "#
+    + #"| sed -n 's|^n\(/dev/tty[^ ]*\)$|\1|p' | head -1); "#
+    + #"[ -z "$__tty" ] && __tty="/dev/tty""#
 
   /// Shell `printf` that emits the OSC 3008 presence sequence for `event`. Written
   /// to the `$__tty` device resolved by `ttyResolveSnippet` so it reaches the

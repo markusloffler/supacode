@@ -958,10 +958,13 @@ struct AgentHookCommandTests {
   // $__tty from the parent agent's terminal since the hook has none of its own.
   private static let guardAndTTY =
     #"[ -n "${SUPACODE_SURFACE_ID:-}" ] && { "#
-    + #"__ppid=${PPID:-}; "#
+    + #"__ppid=${PPID:-}; case "$__ppid" in 0|1) __ppid="";; esac; "#
     + #"set -f; set -- $(ps -o tty= -p "$__ppid" 2>/dev/null); __tty=${1:-}; set +f; "#
-    + #"case "$__ppid" in 0|1) __ppid="";; esac; "#
-    + #"case "$__tty" in *[0-9]*) __tty="/dev/${__tty#/dev/}";; *) __tty="/dev/tty";; esac; "#
+    + #"case "$__tty" in *[0-9]*) __tty="/dev/${__tty#/dev/}";; *) __tty="";; esac; "#
+    + #"[ -z "$__tty" ] && [ -n "$__ppid" ] && "#
+    + #"__tty=$(lsof -p "$__ppid" -a -d 0,1,2 -Fn 2>/dev/null "#
+    + #"| sed -n 's|^n\(/dev/tty[^ ]*\)$|\1|p' | head -1); "#
+    + #"[ -z "$__tty" ] && __tty="/dev/tty"; "#
   private static let suppressTail = #"} >/dev/null 2>&1 || true # supacode-managed-hook"#
 
   private static func presence(_ action: String, _ agent: String, _ event: String) -> String {
