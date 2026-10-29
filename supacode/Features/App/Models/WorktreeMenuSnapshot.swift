@@ -122,6 +122,9 @@ extension AppFeature.Action {
     // `.repositories` cache invalidation (the cacheInvalidations gate above).
     case .agentPresence, .terminals, .commandPalette, .updates, .license:
       return false
+    // MARK: Markdown editor
+    case .markdown:
+      return false
     // Lifecycle / UI / effect-dispatch actions never write snapshot inputs
     // directly; any downstream mutation flows back through a classified arm.
     case .applicationDidBecomeActive, .applicationDidResignActive,

@@ -1121,6 +1121,8 @@ nonisolated extension ContentState {
   fileprivate var terminalState: TerminalContentState? {
     switch self {
     case .terminal(let state): state
+    // MARK: Markdown editor
+    case .markdown: nil
     }
   }
 }

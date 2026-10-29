@@ -302,6 +302,10 @@ struct TerminalContentBuilder {
       switch request.content {
       case .terminal(let terminalState):
         terminalContent(request, terminalState: terminalState)
+      // MARK: Markdown editor
+      // Routed by `CompositeContentFactory`; never reaches the terminal builder.
+      case .markdown:
+        InertTabContent(id: request.contentID, state: request.content)
       }
     }
   }

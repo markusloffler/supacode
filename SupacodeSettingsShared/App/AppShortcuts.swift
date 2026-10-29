@@ -26,11 +26,12 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
   case jumpToLatestUnread
   case togglePullRequestInspector, toggleFilesInspector, toggleNotificationsInspector
   case startSearch, findNext, findPrevious, useSelectionForFind
+  case toggleMarkdownReadMode
 
-  // False for sidebar-only actions; their chords stay with the terminal (⌘⌫ deletes the line).
+  // False for sidebar- and editor-only actions; their chords stay with the terminal (⌘⌫ deletes the line).
   public var isReachableFromTerminal: Bool {
     switch self {
-    case .archiveWorktree, .deleteWorktree:
+    case .archiveWorktree, .deleteWorktree, .toggleMarkdownReadMode:
       false
     case .commandPalette, .worktreeSwitcher, .openSettings, .checkForUpdates, .showMainWindow,
       .toggleLeftSidebar, .revealInSidebar, .expandAllSidebarGroups, .collapseAllSidebarGroups,
@@ -122,6 +123,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .findNext: "findNext"
     case .findPrevious: "findPrevious"
     case .useSelectionForFind: "useSelectionForFind"
+    case .toggleMarkdownReadMode: "toggleMarkdownReadMode"
     }
   }
 
@@ -180,6 +182,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     "findNext": .findNext,
     "findPrevious": .findPrevious,
     "useSelectionForFind": .useSelectionForFind,
+    "toggleMarkdownReadMode": .toggleMarkdownReadMode,
   ]
 
   private init?(stableKey: String) {
@@ -257,6 +260,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .findNext: "Find Next"
     case .findPrevious: "Find Previous"
     case .useSelectionForFind: "Use Selection for Find"
+    case .toggleMarkdownReadMode: "Toggle Markdown Read Mode"
     }
   }
 }
@@ -638,6 +642,9 @@ public enum AppShortcuts {
   public static let findNext = AppShortcut(id: .findNext, key: "g", modifiers: .command)
   public static let findPrevious = AppShortcut(id: .findPrevious, key: "g", modifiers: [.command, .shift])
   public static let useSelectionForFind = AppShortcut(id: .useSelectionForFind, key: "e", modifiers: .command)
+  public static let toggleMarkdownReadMode = AppShortcut(
+    id: .toggleMarkdownReadMode, key: "/", modifiers: .command
+  )
 
   public static let worktreeSelection: [AppShortcut] = [
     selectWorktree1, selectWorktree2, selectWorktree3, selectWorktree4, selectWorktree5,
@@ -718,6 +725,7 @@ public enum AppShortcuts {
         openWorktree, revealInFinder, openRepository, addRemoteRepository, cloneRepository,
         openPullRequest, copyPath, runScript, stopRunScript, jumpToLatestUnread,
         togglePullRequestInspector, toggleFilesInspector, toggleNotificationsInspector,
+        toggleMarkdownReadMode,
       ]
     ),
   ]

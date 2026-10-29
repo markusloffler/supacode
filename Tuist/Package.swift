@@ -37,5 +37,7 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/swift-perception", exact: "2.0.9"),
     .package(url: "https://github.com/pointfreeco/swift-sharing", exact: "2.8.1"),
     .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", exact: "1.8.1"),
+    // MARK: Markdown editor
+    .package(url: "https://github.com/nodes-app/swift-markdown-engine", exact: "0.15.0"),
   ]
 )

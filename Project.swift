@@ -49,6 +49,8 @@ let appDependencies: [TargetDependency] = [
   .external(name: "Sentry"),
   .external(name: "Sharing"),
   .external(name: "Sparkle"),
+  // MARK: Markdown editor
+  .external(name: "MarkdownEngine"),
 ]
 
 let testDependencies: [TargetDependency] = [

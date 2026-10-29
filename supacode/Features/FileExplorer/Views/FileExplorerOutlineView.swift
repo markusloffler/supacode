@@ -1,4 +1,5 @@
 import AppKit
+import Sharing
 import SupacodeSettingsShared
 import SwiftUI
 import UniformTypeIdentifiers
@@ -26,6 +27,9 @@ struct FileExplorerOutlineActions {
   var createItem: (String, Bool) -> Void
   /// The inline rename of a freshly created entry has started.
   var consumePendingRename: () -> Void
+  // MARK: Markdown editor
+  /// Opens a Markdown file in the built-in editor; nil hides the entry.
+  var openInMarkdownEditor: ((URL) -> Void)?
 }
 
 /// NSOutlineView-backed tree. AppKit owns selection, disclosure, keyboard,
@@ -88,6 +92,8 @@ struct FileExplorerOutlineView: NSViewRepresentable {
     outlineView.registerForDraggedTypes([.fileURL])
     outlineView.target = context.coordinator
     outlineView.doubleAction = #selector(Coordinator.outlineViewDoubleClicked(_:))
+    // MARK: Markdown editor
+    outlineView.action = #selector(Coordinator.outlineViewClicked(_:))
 
     let column = NSTableColumn(identifier: Coordinator.columnIdentifier)
     column.resizingMask = .autoresizingMask
@@ -186,6 +192,11 @@ struct FileExplorerOutlineView: NSViewRepresentable {
   final class Coordinator: NSObject {
     static let columnIdentifier = NSUserInterfaceItemIdentifier("fileExplorerColumn")
     private static let logger = SupaLogger("FileExplorer")
+    // MARK: Markdown editor
+    // A stored property, not a body construction: the rule's regex spans lines
+    // and matches a later `) var` in this file.
+    // swiftlint:disable:next shared_construction_in_view_body
+    @Shared(.markdownEditorEnabled) private var markdownEditorEnabled: Bool
 
     weak var outlineView: NSOutlineView?
     weak var scrollView: NSScrollView?
@@ -600,6 +611,18 @@ struct FileExplorerOutlineView: NSViewRepresentable {
       activate(item: item)
     }
 
+    // MARK: Markdown editor
+    /// Single click opens a Markdown file in the built-in editor; other rows only select.
+    @objc func outlineViewClicked(_ sender: Any?) {
+      guard
+        let outlineView,
+        outlineView.clickedRow >= 0,
+        let item = outlineView.item(atRow: outlineView.clickedRow) as? OutlineItem,
+        openInMarkdownEditor(item: item)
+      else { return }
+      Self.logger.info("[USER] Clicked Markdown file \(item.path) in the file inspector.")
+    }
+
     // MARK: Context menu actions.
 
     @objc private func contextMenuOpen(_ sender: NSMenuItem) {
@@ -894,6 +917,34 @@ extension FileExplorerOutlineView.Coordinator: NSOutlineViewDelegate {
 }
 
 extension FileExplorerOutlineView.Coordinator: NSMenuDelegate {
+  // MARK: Markdown editor
+  @objc fileprivate func contextMenuOpenInMarkdownEditor(_ sender: NSMenuItem) {
+    guard let path = sender.representedObject as? String, let url = url(for: path) else { return }
+    actions?.openInMarkdownEditor?(url)
+  }
+
+  /// Opens a Markdown file row in the built-in editor; false for anything else or when unavailable.
+  func openInMarkdownEditor(item: FileExplorerOutlineView.OutlineItem) -> Bool {
+    guard
+      markdownEditorEnabled,
+      let entry = item.entry, !entry.isDirectory,
+      let open = actions?.openInMarkdownEditor,
+      let url = url(for: item.path), MarkdownOpenRouter.isMarkdown(url)
+    else { return false }
+    open(url)
+    return true
+  }
+
+  fileprivate func addMarkdownEditorItem(to menu: NSMenu, path: String) {
+    guard actions?.openInMarkdownEditor != nil, MarkdownOpenRouter.isMarkdown(URL(filePath: path)) else { return }
+    menu.addItem(
+      makeItem(
+        "Open in Supacode Editor", action: #selector(contextMenuOpenInMarkdownEditor(_:)), symbolName: "doc.text",
+        representing: path
+      )
+    )
+  }
+
   func menuNeedsUpdate(_ menu: NSMenu) {
     menu.removeAllItems()
     guard let outlineView else { return }
@@ -933,6 +984,9 @@ extension FileExplorerOutlineView.Coordinator: NSMenuDelegate {
       openWith.representedObject = OpenWithPayload(path: path, action: primary)
       menu.addItem(openWith)
     }
+
+    // MARK: Markdown editor
+    addMarkdownEditorItem(to: menu, path: path)
 
     if !fileOpenActions.isEmpty {
       let openWith = NSMenuItem(title: "Open With", action: nil, keyEquivalent: "")

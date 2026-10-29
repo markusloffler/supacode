@@ -97,6 +97,8 @@ struct AppFeature {
     /// tab-bar views scope through `\.terminals` (narrow) instead of the full
     /// app store. Mirrors sidebar's `RepositoriesFeature` ownership pattern.
     var terminals = TerminalsFeature.State()
+    // MARK: Markdown editor
+    var markdown = MarkdownAppState()
     /// The selected worktree's repository's open action, read from the map the reducer
     /// resolves off the main actor. Derived, never stored: a stored copy refreshes a disk
     /// read after the selection moves, and opens the previous repository's editor until it
@@ -285,6 +287,8 @@ struct AppFeature {
 
   enum Action {
     case agentPresence(AgentPresenceFeature.Action)
+    // MARK: Markdown editor
+    case markdown(MarkdownAction)
     case terminals(TerminalsFeature.Action)
     case applicationDidBecomeActive
     case applicationDidResignActive
@@ -2133,9 +2137,15 @@ struct AppFeature {
 
       case .terminalEvent:
         return .none
+
+      // MARK: Markdown editor
+      case .markdown:
+        return .none
       }
     }
     core
+    // MARK: Markdown editor
+    MarkdownAppReducer()
     Scope(state: \.terminals, action: \.terminals) {
       TerminalsFeature()
     }

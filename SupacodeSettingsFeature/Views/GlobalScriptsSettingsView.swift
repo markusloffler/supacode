@@ -5,6 +5,10 @@ import SwiftUI
 /// Settings sub-section for managing scripts shared across every repository.
 public struct GlobalScriptsSettingsView: View {
   @Bindable var store: StoreOf<SettingsFeature>
+  @Shared(.markdownEditorEnabled) private var markdownEditorEnabled: Bool
+  @Shared(.markdownEditorTheme) private var markdownEditorTheme: MarkdownEditorThemeChoice
+  @Shared(.markdownEditModeAppearance) private var markdownEditModeAppearance: MarkdownEditorAppearance
+  @Shared(.markdownReadModeAppearance) private var markdownReadModeAppearance: MarkdownEditorAppearance
 
   public init(store: StoreOf<SettingsFeature>) {
     self.store = store
@@ -23,6 +27,24 @@ public struct GlobalScriptsSettingsView: View {
           iconColor: .teal,
           footerExample: "nvim \"$SUPACODE_FILE_PATH\""
         )
+
+        // MARK: Markdown editor
+        Section {
+          Toggle("Open Markdown files in built-in editor", isOn: Binding($markdownEditorEnabled))
+            .help("Double-clicked .md files open in an editor pane instead of the open-file script.")
+          Picker("Editor theme", selection: Binding($markdownEditorTheme)) {
+            ForEach(MarkdownEditorThemeChoice.allCases) { Text($0.title).tag($0) }
+          }
+          .help("Typography and colors of the Markdown editor.")
+          Picker("Editor appearance", selection: Binding($markdownEditModeAppearance)) {
+            ForEach(MarkdownEditorAppearance.allCases) { Text($0.title).tag($0) }
+          }
+          .help("Light or dark editor in edit mode, independent of the app.")
+          Picker("Read mode appearance", selection: Binding($markdownReadModeAppearance)) {
+            ForEach(MarkdownEditorAppearance.allCases) { Text($0.title).tag($0) }
+          }
+          .help("Light or dark editor in read mode (⌘/), independent of the app.")
+        }
 
         Section(
           footer: Text(

@@ -145,6 +145,8 @@ private struct FileExplorerTreeContent: View {
   let bottomBarInset: CGFloat
   @State private var quickLookURL: URL?
   @Environment(OpenActionIconStore.self) private var iconStore: OpenActionIconStore?
+  // MARK: Markdown editor
+  @Environment(\.openInMarkdownEditor) private var openInMarkdownEditor
   @Shared(.settingsFile) private var settingsFile
 
   var body: some View {
@@ -170,7 +172,8 @@ private struct FileExplorerTreeContent: View {
             },
             rename: { store.send(.renameRequested(path: $0, newName: $1)) },
             createItem: { store.send(.createItemRequested(directory: $0, isDirectory: $1)) },
-            consumePendingRename: { store.send(.pendingRenameConsumed) }
+            consumePendingRename: { store.send(.pendingRenameConsumed) },
+            openInMarkdownEditor: openInMarkdownEditor?.open
           ),
           chromeTextSize: settingsFile.global.chromeTextSize,
           bottomBarInset: bottomBarInset
