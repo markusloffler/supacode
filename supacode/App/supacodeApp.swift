@@ -358,7 +358,8 @@ struct SupacodeApp: App {
     runtime: GhosttyRuntime,
     terminalManager: WorktreeTerminalManager
   ) -> LayoutContentFactory {
-    TerminalContentBuilder(
+    // MARK: Markdown editor
+    let terminal = TerminalContentBuilder(
       runtime: runtime,
       worktree: { [weak terminalManager] id in
         terminalManager?.appStore?.withState { $0.repositories.worktree(for: id) }
@@ -393,6 +394,7 @@ struct SupacodeApp: App {
           .blockingScriptEnvironment(for: request.tabID) ?? [:]
       }
     ).factory()
+    return CompositeContentFactory.make(terminal: terminal, markdown: .live(terminalManager: terminalManager))
   }
 
   @MainActor

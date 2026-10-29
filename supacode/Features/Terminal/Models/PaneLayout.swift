@@ -29,6 +29,8 @@ nonisolated struct PaneID: Hashable, Identifiable, Codable, Sendable {
 /// What kind of content a tab hosts; additive for future kinds.
 nonisolated enum ContentKind: String, Codable, Sendable {
   case terminal
+  // MARK: Markdown editor
+  case markdown
 }
 
 /// How a command-running terminal launches (scripts, prompts). Blocking
@@ -95,10 +97,13 @@ nonisolated struct TerminalContentState: Equatable, Codable, Sendable {
 /// Kind-keyed content payload; each case owns its kind's persisted state.
 nonisolated enum ContentState: Equatable, Codable, Sendable {
   case terminal(TerminalContentState)
+  // MARK: Markdown editor
+  case markdown(MarkdownContentState)
 
   private enum CodingKeys: String, CodingKey {
     case kind
     case terminal
+    case markdown
   }
 
   init(from decoder: any Decoder) throws {
@@ -106,6 +111,8 @@ nonisolated enum ContentState: Equatable, Codable, Sendable {
     switch try container.decode(ContentKind.self, forKey: .kind) {
     case .terminal:
       self = .terminal(try container.decode(TerminalContentState.self, forKey: .terminal))
+    case .markdown:
+      self = .markdown(try container.decode(MarkdownContentState.self, forKey: .markdown))
     }
   }
 
@@ -115,12 +122,16 @@ nonisolated enum ContentState: Equatable, Codable, Sendable {
     case .terminal(let state):
       try container.encode(ContentKind.terminal, forKey: .kind)
       try container.encode(state, forKey: .terminal)
+    case .markdown(let state):
+      try container.encode(ContentKind.markdown, forKey: .kind)
+      try container.encode(state, forKey: .markdown)
     }
   }
 
   var kind: ContentKind {
     switch self {
     case .terminal: .terminal
+    case .markdown: .markdown
     }
   }
 
@@ -128,6 +139,8 @@ nonisolated enum ContentState: Equatable, Codable, Sendable {
   var freshSeed: ContentState {
     switch self {
     case .terminal: .terminal(TerminalContentState(workingDirectory: nil))
+    // A sibling spawned from an editor tab is a terminal.
+    case .markdown: .terminal(TerminalContentState(workingDirectory: nil))
     }
   }
 
@@ -136,6 +149,7 @@ nonisolated enum ContentState: Equatable, Codable, Sendable {
   var isEphemeral: Bool {
     switch self {
     case .terminal(let state): state.launch?.bypassZmx == true
+    case .markdown: false
     }
   }
 }
