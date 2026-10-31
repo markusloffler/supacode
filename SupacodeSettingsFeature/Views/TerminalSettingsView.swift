@@ -77,6 +77,15 @@ public struct TerminalSettingsView: View {
       } footer: {
         Text("Transparent background preferences only apply to the Supacode theme.")
       }
+      Section("Mouse") {
+        Toggle(isOn: $store.terminalDoubleClickOpensMarkdown) {
+          Text("Double-click opens Markdown files")
+          Text(
+            "Double-clicking a Markdown file name in a terminal opens it in the Supacode editor. "
+              + "Use Shift+double-click in apps that capture the mouse, like Claude Code."
+          )
+        }
+      }
       Section("Persistence") {
         Toggle(isOn: $store.terminateSessionsOnQuit) {
           Text("Terminate sessions on quit")

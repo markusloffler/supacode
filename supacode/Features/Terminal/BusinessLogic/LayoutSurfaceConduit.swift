@@ -15,6 +15,9 @@ struct LayoutSurfaceConduit {
   /// Handles a zmx-backed surface that closed without an explicit user close;
   /// the integration layer probes the session and spares, kills, or reattaches.
   let handleUnexpectedZmxClose: (GhosttySurfaceView) -> Void
+  /// Feeds the right-click "open this path" items; nil context hides them.
+  var pathMenuContext: () -> TerminalPathMenuContext? = { nil }
+  var openPath: (TerminalPathOpenRequest) -> Void = { _ in }
 
   func wire(_ view: GhosttySurfaceView, contentID: ContentID) {
     let surfaceID = contentID.rawValue
@@ -23,6 +26,8 @@ struct LayoutSurfaceConduit {
     host.registerSurfaceState(for: surfaceID)
     wireTopologyCallbacks(view, contentID: contentID, surfaceID: surfaceID)
     wireLifecycleCallbacks(view, contentID: contentID, surfaceID: surfaceID)
+    view.pathMenuContext = pathMenuContext
+    view.onOpenPath = openPath
   }
 
   /// Identity, not key presence: a replaced surface keeps its UUID, so stale

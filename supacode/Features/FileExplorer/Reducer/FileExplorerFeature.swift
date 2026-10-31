@@ -167,6 +167,9 @@ struct FileExplorerFeature {
     case showMoreTapped(directory: String)
     case refreshRequested
     case rowSelected(String?)
+    /// Expand the ancestors of `url` and select it, e.g. from a terminal right-click.
+    /// Carries the worktree and root so it lands even before the pane is shown.
+    case revealRequested(worktreeID: Worktree.ID, root: URL, url: URL)
     case applicationBecameActive
     case listingLoaded(
       worktreeID: Worktree.ID,
@@ -270,6 +273,9 @@ struct FileExplorerFeature {
         guard let id = state.activeWorktreeID else { return .none }
         state.trees[id]?.selectedPath = path
         return .none
+
+      case .revealRequested(let worktreeID, let root, let url):
+        return handleRevealRequested(&state, worktreeID: worktreeID, root: root, url: url)
 
       case .listingLoaded(let worktreeID, let root, let directory, let limit, let result):
         // Keyed by the worktree the effect was issued for, so a listing that
@@ -433,6 +439,45 @@ struct FileExplorerFeature {
     }
     state.trees[id] = tree
     return effect
+  }
+
+  /// Expands every ancestor of `url`, issuing reads for the unloaded ones, and
+  /// selects it. Creates the tree when the pane has not been shown yet; the
+  /// following `contextChanged` keeps it because the root matches.
+  private func handleRevealRequested(
+    _ state: inout State,
+    worktreeID: Worktree.ID,
+    root: URL,
+    url: URL
+  ) -> Effect<Action> {
+    guard let path = Self.relativePath(of: url, under: root), path != TreeState.rootPath else {
+      Self.logger.debug("revealRequested: \(url.path) is outside \(root.path), ignoring.")
+      return .none
+    }
+    var tree = state.trees[worktreeID].flatMap { $0.root == root ? $0 : nil } ?? TreeState(root: root)
+    var directories = [TreeState.rootPath]
+    var ancestor = Self.parentDirectory(of: path)
+    while ancestor != TreeState.rootPath {
+      directories.append(ancestor)
+      ancestor = Self.parentDirectory(of: ancestor)
+    }
+    var effects: [Effect<Action>] = []
+    for directory in directories {
+      if directory != TreeState.rootPath { tree.expanded.insert(directory) }
+      switch tree.directories[directory]?.status {
+      case .loaded, .loading:
+        break
+      case .failed, .none:
+        tree.directories[directory] = .initialLoading
+        effects.append(
+          listEffect(worktreeID: worktreeID, root: root, directory: directory, limit: Self.initialListingLimit)
+        )
+      }
+    }
+    tree.selectedPath = path
+    state.trees[worktreeID] = tree
+    Self.logger.debug("revealRequested: \(path), \(effects.count) listing(s) issued.")
+    return .merge(effects)
   }
 
   /// Flips each not-already-loading directory to `.loading(previous:)` and

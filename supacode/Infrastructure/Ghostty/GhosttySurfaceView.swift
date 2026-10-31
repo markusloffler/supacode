@@ -169,6 +169,10 @@ final class GhosttySurfaceView: NSView, Identifiable {
   /// the tree without listening to keystrokes. Only consulted on RE-attachment
   /// (not the first mount) so we never fight the initial-focus path.
   var shouldClaimFocus: (() -> Bool)?
+  /// Read when the context menu opens; nil hides the "open this path" items.
+  var pathMenuContext: (() -> TerminalPathMenuContext?)?
+  /// Fired by the "open this path" context-menu items.
+  var onOpenPath: ((TerminalPathOpenRequest) -> Void)?
   /// Set the first time this view lands in a real window. The self-claim path
   /// is gated on this so it only fires for the re-attachment case.
   private var hasBeenInWindow = false
@@ -874,6 +878,9 @@ final class GhosttySurfaceView: NSView, Identifiable {
     if forwardedLeftPressNumber == event.eventNumber {
       forwardedLeftPressNumber = nil
       sendMouseButton(event, state: GHOSTTY_MOUSE_RELEASE, button: GHOSTTY_MOUSE_LEFT)
+      if let surface {
+        openMarkdownOnDoubleClick(event, mouseCaptured: ghostty_surface_mouse_captured(surface))
+      }
     } else if let forwardedLeftPressNumber {
       // Keep the press pending so its real release still pairs.
       surfaceLogger.debug("Skipped left release \(event.eventNumber) unpaired with press \(forwardedLeftPressNumber).")
@@ -1504,6 +1511,7 @@ final class GhosttySurfaceView: NSView, Identifiable {
     surfaceLogger.debug("[USER] Opened terminal context menu (shiftBypass: \(shiftBypass))")
 
     let menu = NSMenu()
+    addPathItems(to: menu)
     if ghostty_surface_has_selection(surface) {
       menu.addItem(NSMenuItem(title: "Copy", action: #selector(copy(_:)), keyEquivalent: ""))
     }

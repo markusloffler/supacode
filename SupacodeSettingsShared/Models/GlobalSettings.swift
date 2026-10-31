@@ -172,6 +172,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   /// down zmx sessions, local and host-side, so nothing keeps running in the
   /// background. Default off because persistence is the headline feature.
   public var terminateSessionsOnQuit: Bool
+  /// When true, double-clicking a Markdown file name in a terminal opens it in
+  /// the Supacode editor. Off by default: a double-click normally just selects.
+  public var terminalDoubleClickOpensMarkdown: Bool
   /// When true, remote surfaces wrap their session in zmx on the host when
   /// the host has it installed, so the session survives disconnects.
   public var remoteSessionPersistenceEnabled: Bool
@@ -277,6 +280,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     confirmCloseSurface: Bool = true,
     confirmCloseTab: ConfirmCloseTabMode = .busy,
     terminateSessionsOnQuit: Bool = false,
+    terminalDoubleClickOpensMarkdown: Bool = false,
     remoteSessionPersistenceEnabled: Bool = true,
     appVisibility: AppVisibility = .dockAndMenuBar,
     terminalHibernationEnabled: Bool = true,
@@ -326,6 +330,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.confirmCloseSurface = confirmCloseSurface
     self.confirmCloseTab = confirmCloseTab
     self.terminateSessionsOnQuit = terminateSessionsOnQuit
+    self.terminalDoubleClickOpensMarkdown = terminalDoubleClickOpensMarkdown
     self.remoteSessionPersistenceEnabled = remoteSessionPersistenceEnabled
     self.appVisibility = appVisibility
     self.terminalHibernationEnabled = terminalHibernationEnabled
@@ -533,6 +538,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     terminateSessionsOnQuit =
       try container.decodeIfPresent(Bool.self, forKey: .terminateSessionsOnQuit)
       ?? Self.default.terminateSessionsOnQuit
+    terminalDoubleClickOpensMarkdown =
+      try container.decodeIfPresent(Bool.self, forKey: .terminalDoubleClickOpensMarkdown)
+      ?? Self.default.terminalDoubleClickOpensMarkdown
     remoteSessionPersistenceEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .remoteSessionPersistenceEnabled)
       ?? Self.default.remoteSessionPersistenceEnabled

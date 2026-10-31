@@ -92,6 +92,8 @@ final class WorktreeTerminalManager {
   /// Reads the freshest `agentsBySurface` at flush time so incremental captures
   /// embed live badge records instead of the empty default.
   var currentAgentsBySurface: (() -> [UUID: [TerminalLayoutSnapshot.SurfaceAgentRecord]])?
+  /// Editor icons for the terminal right-click menu; a miss renders no icon.
+  @ObservationIgnored var openActionIcon: ((OpenWorktreeAction) -> NSImage?)?
   /// Holds `.idle` long enough to collapse PostToolUse/PreToolUse busy/idle alternation
   /// into a sustained busy; stays sub-perceptible for the badge clearing at end-of-session.
   private static let idleHookDebounceDuration: Duration = .milliseconds(400)
