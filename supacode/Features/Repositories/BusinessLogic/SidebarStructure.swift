@@ -660,7 +660,7 @@ extension RepositoriesFeature.Action {
       .pullRequestAction,
       .openSelectedWorktreePullRequest, .pullRequestOpenFetchFailed,
       .showToast, .dismissToast,
-      .toggleInspectorPane, .setInspectorPresented,
+      .toggleInspectorPane, .setInspectorPresented, .revealInFileExplorer,
       .fileExplorer,
       .delayedPullRequestRefresh,
       .openRepositorySettings, .requestCustomizeRepository,

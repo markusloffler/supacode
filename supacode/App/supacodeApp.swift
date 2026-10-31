@@ -132,7 +132,7 @@ struct SupacodeApp: App {
   @State private var worktreeInfoWatcher: WorktreeInfoWatcherManager
   @State private var commandKeyObserver: CommandKeyObserver
   @State private var globalHotkeyMonitor: GlobalHotkeyMonitor
-  @State private var openActionIcons = OpenActionIconStore()
+  @State private var openActionIcons: OpenActionIconStore
   @State private var store: StoreOf<AppFeature>
 
   @MainActor init() {
@@ -164,6 +164,9 @@ struct SupacodeApp: App {
     _ghosttyShortcuts = State(initialValue: shortcuts)
     let terminalManager = Self.makeTerminalManager(runtime: runtime)
     _terminalManager = State(initialValue: terminalManager)
+    let openActionIcons = OpenActionIconStore()
+    _openActionIcons = State(initialValue: openActionIcons)
+    terminalManager.openActionIcon = { [weak openActionIcons] in openActionIcons?.icon(for: $0) }
     // Seed the flag at construction so a user who disabled background refresh
     // never eats a launch-time SSH / gh burst before the setting is applied.
     let worktreeInfoWatcher = WorktreeInfoWatcherManager(
@@ -386,6 +389,12 @@ struct SupacodeApp: App {
           runtime: ContentRuntime.liveValue,
           handleUnexpectedZmxClose: { [weak terminalManager] view in
             terminalManager?.handleUnexpectedZmxClose(view, worktreeID: worktree.id)
+          },
+          pathMenuContext: { [weak terminalManager] in
+            terminalManager?.pathMenuContext(for: worktree.id)
+          },
+          openPath: { [weak terminalManager] request in
+            terminalManager?.openTerminalPath(request, worktreeID: worktree.id)
           }
         ).wire(view, contentID: request.contentID)
       },

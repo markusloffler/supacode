@@ -84,6 +84,7 @@ public struct SettingsFeature {
     public var confirmCloseSurface: Bool
     public var confirmCloseTab: ConfirmCloseTabMode
     public var terminateSessionsOnQuit: Bool
+    public var terminalDoubleClickOpensMarkdown: Bool
     public var remoteSessionPersistenceEnabled: Bool
     public var appVisibility: AppVisibility
     public var terminalHibernationEnabled: Bool
@@ -227,6 +228,7 @@ public struct SettingsFeature {
       confirmCloseSurface = settings.confirmCloseSurface
       confirmCloseTab = settings.confirmCloseTab
       terminateSessionsOnQuit = settings.terminateSessionsOnQuit
+      terminalDoubleClickOpensMarkdown = settings.terminalDoubleClickOpensMarkdown
       remoteSessionPersistenceEnabled = settings.remoteSessionPersistenceEnabled
       appVisibility = settings.appVisibility
       terminalHibernationEnabled = settings.terminalHibernationEnabled
@@ -420,6 +422,7 @@ public struct SettingsFeature {
         state.confirmCloseSurface = normalizedSettings.confirmCloseSurface
         state.confirmCloseTab = normalizedSettings.confirmCloseTab
         state.terminateSessionsOnQuit = normalizedSettings.terminateSessionsOnQuit
+        state.terminalDoubleClickOpensMarkdown = normalizedSettings.terminalDoubleClickOpensMarkdown
         state.remoteSessionPersistenceEnabled = normalizedSettings.remoteSessionPersistenceEnabled
         state.appVisibility = normalizedSettings.appVisibility
         state.terminalHibernationEnabled = normalizedSettings.terminalHibernationEnabled
@@ -1217,6 +1220,7 @@ extension SettingsFeature.State {
     settings.confirmCloseSurface = confirmCloseSurface
     settings.confirmCloseTab = confirmCloseTab
     settings.terminateSessionsOnQuit = terminateSessionsOnQuit
+    settings.terminalDoubleClickOpensMarkdown = terminalDoubleClickOpensMarkdown
     settings.remoteSessionPersistenceEnabled = remoteSessionPersistenceEnabled
     settings.appVisibility = appVisibility
     settings.terminalHibernationEnabled = terminalHibernationEnabled

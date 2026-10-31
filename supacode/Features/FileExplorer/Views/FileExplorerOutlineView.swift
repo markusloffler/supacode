@@ -399,6 +399,9 @@ struct FileExplorerOutlineView: NSViewRepresentable {
       isApplyingState = true
       if let targetRow {
         outlineView.selectRowIndexes([targetRow], byExtendingSelection: false)
+        // Only reducer-driven changes reach here (a click already matches), so a
+        // reveal lands on screen.
+        outlineView.scrollRowToVisible(targetRow)
       } else {
         outlineView.deselectAll(nil)
       }
