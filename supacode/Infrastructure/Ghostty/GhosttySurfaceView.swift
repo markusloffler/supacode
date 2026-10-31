@@ -1495,9 +1495,13 @@ final class GhosttySurfaceView: NSView, Identifiable {
     }
 
     guard let surface else { return nil }
-    if ghostty_surface_mouse_captured(surface) {
+    // Shift bypasses mouse reporting: Ghostty already declined to forward the
+    // press to the program, so the menu is still wanted while the mouse is captured.
+    let shiftBypass = event.type == .rightMouseDown && event.modifierFlags.contains(.shift)
+    if ghostty_surface_mouse_captured(surface) && !shiftBypass {
       return nil
     }
+    surfaceLogger.debug("[USER] Opened terminal context menu (shiftBypass: \(shiftBypass))")
 
     let menu = NSMenu()
     if ghostty_surface_has_selection(surface) {
