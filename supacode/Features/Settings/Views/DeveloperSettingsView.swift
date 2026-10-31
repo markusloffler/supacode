@@ -29,6 +29,12 @@ struct DeveloperSettingsView: View {
           Text("Agent badges")
           Text("Show an icon in the sidebar and tab while a coding agent is running in that surface.")
         }
+        Toggle(isOn: $store.sandboxRestartInjectionEnabled) {
+          Text("Sandbox restart")
+          Text(
+            "When an sclaude or scopilot session asks for a wider sandbox, confirm the extended command "
+              + "line in a dialog; Restart exits the session and runs it.")
+        }
       } footer: {
         Text("These features require an installed agent integration.")
       }

@@ -58,6 +58,9 @@ final class WorktreeContentHost {
   @ObservationIgnored private var lastCustomNotificationAt: [UUID: any InstantProtocol<Duration>] = [:]
   @ObservationIgnored private var pendingAgentOSCNotifications: [UUID: Task<Void, Never>] = [:]
   @ObservationIgnored private var lastEmittedFocusSurfaceId: UUID?
+  @ObservationIgnored private lazy var sandboxRestart = SandboxRestartInjector(clock: clock) { [weak self] in
+    self?.liveSurface($0)
+  }
   /// A focus request that arrived before its surface was live (launch restore of
   /// a hibernated tab). Resolved by `applySurfaceActivity` once the focused
   /// surface is live and its window is key; it targets whatever pane is focused
@@ -462,6 +465,9 @@ final class WorktreeContentHost {
       surfaceExists: isKnownSurface(surfaceID)
     ) {
     case .success(let event):
+      if event.eventName == .idle {
+        sandboxRestart.agentBecameIdle(surfaceID: surfaceID)
+      }
       onAgentHookEvent?(event)
     case .failure(.unknownSurface):
       Self.logger.debug("Dropped presence signal for unknown surface \(surfaceID)")
@@ -978,6 +984,11 @@ final class WorktreeContentHost {
     @Shared(.settingsFile) var settingsFile: SettingsFile
     if settingsFile.global.globalScripts.contains(where: { $0.id == id }) { return .global }
     return nil
+  }
+
+  /// A launcher exited after a sandbox-restart marker: paste its extended command line.
+  func handleSandboxRestartCommandFinished(surfaceID: UUID) {
+    sandboxRestart.commandFinished(surfaceID: surfaceID)
   }
 
   /// The command finished; the shell stays alive for output inspection.
