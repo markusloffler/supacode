@@ -265,6 +265,9 @@ final class CommandPalettePanelHostView: NSView {
     if AppShortcuts.commandPalette.effective(from: overrides)?.matches(event) == true {
       return .commands
     }
+    if AppShortcuts.openFile.effective(from: overrides)?.matches(event) == true {
+      return .fileSearch
+    }
     return nil
   }
 

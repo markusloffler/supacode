@@ -339,6 +339,17 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     }
   }
 
+  /// How to open `filePath` inside the editor window for the project at `rootPath`
+  /// (reusing that window when it is already open), or `nil` when the editor
+  /// can only open the bare file. VS Code family only: `code <root> <file>`.
+  public func projectFileOpenInvocation(rootPath: String, filePath: String) -> RemoteOpenInvocation? {
+    guard let cliName = vscodeFamilyCLIName else { return nil }
+    return RemoteOpenInvocation(
+      executable: .appRelativePath("Contents/Resources/app/bin/\(cliName)"),
+      arguments: [rootPath, filePath]
+    )
+  }
+
   /// The bundled CLI binary name (under `Contents/Resources/app/bin/`) for the
   /// VS Code family, or `nil` for any other editor. Doubles as the family
   /// membership test backing the disabled-reason tooltip.

@@ -32,6 +32,10 @@ nonisolated struct FileExplorerClient: Sendable {
   /// Creates an empty file or folder in `directory` under a free name derived
   /// from `name`, returning the name it landed on.
   var createItem: @Sendable (_ directory: URL, _ name: String, _ isDirectory: Bool) async throws -> String
+  /// Every file under `root` as a root-relative path, for the Open File search:
+  /// git's tracked plus untracked-but-not-ignored files, else (a plain folder)
+  /// a hidden-skipping walk capped at `projectFileLimit`.
+  var listProjectFiles: @Sendable (_ root: URL) async -> [String]
 }
 
 /// Whether a file transfer relocates the source or duplicates it.
@@ -126,6 +130,9 @@ nonisolated extension FileExplorerClient: DependencyKey {
         }
         return finalName
       }.value
+    },
+    listProjectFiles: { root in
+      await Task.detached(priority: .userInitiated) { projectFiles(root: root) }.value
     }
   )
 
@@ -139,7 +146,8 @@ nonisolated extension FileExplorerClient: DependencyKey {
     transfer: { _, _, _, _, _ in },
     rename: { _, _ in },
     moveToTrash: { _ in },
-    createItem: { _, name, _ in name }
+    createItem: { _, name, _ in name },
+    listProjectFiles: { _ in [] }
   )
 }
 

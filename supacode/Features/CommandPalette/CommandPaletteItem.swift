@@ -3,7 +3,7 @@ import Sharing
 import SupacodeSettingsShared
 
 struct CommandPaletteItem: Identifiable, Equatable {
-  static let defaultPriorityTier = 100
+  nonisolated static let defaultPriorityTier = 100
 
   let id: String
   let title: String
@@ -97,6 +97,8 @@ struct CommandPaletteItem: Identifiable, Equatable {
     case openFailingCheckDetails(Worktree.ID)
     case runScript(ScriptDefinition)
     case stopScript(UUID, name: String)
+    /// A file of the selected worktree, from the ⌘⇧O file search.
+    case openProjectFile(URL, root: URL)
     #if DEBUG
       case debugTestToast(RepositoriesFeature.StatusToast)
     #endif
@@ -124,6 +126,8 @@ struct CommandPaletteItem: Identifiable, Equatable {
       true
     case .runScript, .stopScript:
       true
+    case .openProjectFile:
+      false
     #if DEBUG
       case .debugTestToast:
         true
@@ -154,6 +158,8 @@ struct CommandPaletteItem: Identifiable, Equatable {
       .customizeWorktreeAppearance:
       false
     case .runScript, .stopScript:
+      false
+    case .openProjectFile:
       false
     #if DEBUG
       case .debugTestToast:
@@ -188,7 +194,8 @@ struct CommandPaletteItem: Identifiable, Equatable {
       .renameBranch,
       .customizeRepositoryAppearance,
       .customizeWorktreeAppearance,
-      .stopScript:
+      .stopScript,
+      .openProjectFile:
       nil
     case .runScript(let definition):
       definition.kind == .run ? AppShortcuts.runScript : nil

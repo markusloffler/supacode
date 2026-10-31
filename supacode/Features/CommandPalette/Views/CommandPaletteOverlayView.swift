@@ -10,6 +10,11 @@ struct CommandPaletteOverlayView: View {
   @FocusState private var isQueryFocused: Bool
   @State private var hoveredID: CommandPaletteItem.ID?
   @State private var filteredItems: [CommandPaletteItem] = []
+  /// The in-flight background file ranking; each keystroke cancels the previous one.
+  @State private var fileSearchTask: Task<Void, Never>?
+  /// Return pressed while a ranking was in flight: submit once it lands, so a
+  /// quick type-then-Return never opens a stale match.
+  @State private var submitsWhenRanked = false
   @Shared(.settingsFile) private var settingsFile
 
   var body: some View {
@@ -28,7 +33,11 @@ struct CommandPaletteOverlayView: View {
         case .exit:
           store.send(.setPresented(false))
         case .submit:
-          submitSelected(rows: filteredItems)
+          if fileSearchTask != nil {
+            submitsWhenRanked = true
+          } else {
+            submitSelected(rows: filteredItems)
+          }
         case .move(let direction):
           moveSelection(direction, rows: filteredItems)
         }
@@ -39,21 +48,18 @@ struct CommandPaletteOverlayView: View {
     )
     .task {
       isQueryFocused = true
-      let updatedItems = refreshFilteredItems(items: items)
-      updateSelection(rows: updatedItems)
+      refreshFilteredItems(resettingSelection: false)
     }
     .onChange(of: store.query) { _, _ in
-      let updatedItems = refreshFilteredItems(items: items)
-      resetSelection(rows: updatedItems)
+      refreshFilteredItems(resettingSelection: true)
     }
     .onChange(of: items) { _, _ in
-      let updatedItems = refreshFilteredItems(items: items)
-      updateSelection(rows: updatedItems)
+      refreshFilteredItems(resettingSelection: false)
     }
     .onChange(of: store.recencyByItemID) { _, _ in
-      let updatedItems = refreshFilteredItems(items: items)
-      updateSelection(rows: updatedItems)
+      refreshFilteredItems(resettingSelection: false)
     }
+    .onDisappear { fileSearchTask?.cancel() }
     // The palette hosts in its own `NSHostingView`, so republish the chrome
     // text size here to reach the query field and rows.
     .appChromeTextSize(settingsFile.global.chromeTextSize)
@@ -86,6 +92,8 @@ struct CommandPaletteOverlayView: View {
       return "Go to worktree…"
     case .commands:
       return "Search for actions…"
+    case .fileSearch:
+      return store.projectFiles?.isLoading == true && items.isEmpty ? "Loading files…" : "Search files by name…"
     }
   }
 
@@ -122,17 +130,49 @@ struct CommandPaletteOverlayView: View {
     store.send(.activateItem(item))
   }
 
-  private func refreshFilteredItems(items: [CommandPaletteItem]) -> [CommandPaletteItem] {
-    let now = Date.now
-    let updatedItems = CommandPaletteFeature.filterItems(
-      items: items,
-      query: store.query,
-      mode: store.mode,
-      recencyByID: store.recencyByItemID,
-      now: now
-    )
-    filteredItems = updatedItems
-    return updatedItems
+  /// Re-filters `items` for the current query. File search ranks up to tens of
+  /// thousands of paths, so it runs off the main actor and keeps typing responsive;
+  /// the other modes filter a few dozen items inline.
+  private func refreshFilteredItems(resettingSelection: Bool) {
+    fileSearchTask?.cancel()
+    fileSearchTask = nil
+    guard store.mode == .fileSearch, let files = store.projectFiles?.files, files.count == items.count else {
+      let updatedItems = CommandPaletteFeature.filterItems(
+        items: items,
+        query: store.query,
+        mode: store.mode,
+        recencyByID: store.recencyByItemID,
+        now: .now
+      )
+      applyFilteredItems(updatedItems, resettingSelection: resettingSelection)
+      return
+    }
+    let items = items
+    let query = store.query
+    let recencyByID = store.recencyByItemID
+    fileSearchTask = Task {
+      guard
+        let indices = await CommandPaletteFeature.rankProjectFiles(
+          files, query: query, recencyByID: recencyByID, now: .now
+        ),
+        !Task.isCancelled
+      else { return }
+      applyFilteredItems(indices.map { items[$0] }, resettingSelection: resettingSelection)
+      fileSearchTask = nil
+      if submitsWhenRanked {
+        submitsWhenRanked = false
+        submitSelected(rows: filteredItems)
+      }
+    }
+  }
+
+  private func applyFilteredItems(_ rows: [CommandPaletteItem], resettingSelection: Bool) {
+    filteredItems = rows
+    if resettingSelection {
+      resetSelection(rows: rows)
+    } else {
+      updateSelection(rows: rows)
+    }
   }
 }
 
@@ -277,7 +317,7 @@ private struct CommandPaletteRowView: View {
       .openPullRequest, .markPullRequestReady, .mergePullRequest, .closePullRequest, .copyFailingJobURL,
       .copyCiFailureLogs,
       .rerunFailedJobs, .openFailingCheckDetails, .worktreeSelect,
-      .customizeRepositoryAppearance, .customizeWorktreeAppearance:
+      .customizeRepositoryAppearance, .customizeWorktreeAppearance, .openProjectFile:
       return nil
     case .removeWorktree:
       return "Remove"
@@ -348,6 +388,8 @@ private struct CommandPaletteRowView: View {
       return definition.resolvedSystemImage
     case .stopScript:
       return "stop.fill"
+    case .openProjectFile(let url, _):
+      return MarkdownOpenRouter.isMarkdown(url) ? "doc.richtext" : "doc"
     #if DEBUG
       case .debugTestToast:
         return "ladybug"
@@ -367,7 +409,7 @@ private struct CommandPaletteRowView: View {
       .copyCiFailureLogs,
       .rerunFailedJobs, .openFailingCheckDetails:
       return true
-    case .worktreeSelect, .removeWorktree, .archiveWorktree:
+    case .worktreeSelect, .removeWorktree, .archiveWorktree, .openProjectFile:
       return false
     case .renameBranch, .customizeRepositoryAppearance, .customizeWorktreeAppearance:
       return true
@@ -533,6 +575,9 @@ private struct CommandPaletteRowView: View {
       base = "Run \(definition.name)"
     case .stopScript(_, let name):
       base = "Stop \(name)"
+    case .openProjectFile(let url, _):
+      base =
+        MarkdownOpenRouter.isMarkdown(url) ? "Open in the Supacode Markdown editor" : "Open in the project's editor"
     #if DEBUG
       case .debugTestToast:
         base = row.title

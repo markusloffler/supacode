@@ -334,7 +334,7 @@ struct AppShortcutsTests {
     let effective = AppShortcuts.cloneRepository.effective(from: [.cloneRepository: override])
     #expect(effective?.display == AppShortcuts.cloneRepository.display)
     // An enabled-by-default shortcut needs no override to be active.
-    #expect(AppShortcuts.defaultEnabledOverride(for: .openRepository) == nil)
+    #expect(AppShortcuts.defaultEnabledOverride(for: .openWorktree) == nil)
   }
 
   // MARK: - Active worktree selection slots.
