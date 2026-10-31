@@ -1,5 +1,43 @@
 # Supacode
 
+> [!IMPORTANT]
+> **Fork changes:** This is a personal fork of [supabitapp/supacode](https://github.com/supabitapp/supacode);
+> everything after the divider is the upstream README.
+>
+> **Features**
+>
+> - **Markdown editor with Prompt Edit**: click a `.md` file in the file explorer to open it
+>   in an editor pane split to the right. Toggle a read mode with ⌘/ and override light/dark
+>   appearance; uses a GitHub theme. Select text and choose *Prompt Edit…* to send an edit
+>   instruction with the file path and line range to a coding agent of the worktree, queued until
+>   the agent is idle.
+> - **Open paths from the terminal**: right-click a filename or path in the terminal to open it in
+>   the default editor, *Open With*, the Markdown editor, locate it in the File Inspector, or
+>   reveal it in Finder. Relative names are resolved against the cwd and the worktree, falling
+>   back to a search of the worktree's git files.
+>   Optionally (Settings → Terminal), double-clicking a Markdown file name opens it in the
+>   Supacode editor. Use Shift+double-click in apps that capture the mouse.
+> - **Terminal context menu while the mouse is captured**: Shift+right-click shows the context menu
+>   even when a TUI captures the mouse.
+> - **Sidebar workspaces**: file repositories under numbered workspaces and filter the sidebar
+>   with the workspace picker; ⌥⌘T cycles to the next workspace.
+> - **Favorite editors**: quick-launch buttons for VS Code, Xcode, Typora and Fork (if installed)
+>   are always visible in the toolbar; Typora is added as an editor.
+>
+> **Improvements**
+>
+> - Background opacity toggled via Ghostty's "toggle background opacity" persists across restarts.
+> - Bigger sidebar section headers and bigger project and folder titles in the detail view.
+> - Extended `AGENTS.md` and added code structure docs (`code_structure/`) and feature plans
+>   (`docs/plans/`).
+>
+> **Personal**
+>
+> - Agent presence detects Claude running inside the srt (sandbox-runtime) sandbox;
+>   `.sbuild.json` is untracked.
+
+---
+
 **A native macOS command center for running coding agents in parallel.**
 
 Run several coding agents side by side from one window: each task gets its own git worktree and
