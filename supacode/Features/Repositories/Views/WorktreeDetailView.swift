@@ -124,7 +124,7 @@ struct WorktreeDetailView: View {
       )
       // MARK: Markdown editor
       .environment(\.openInMarkdownEditor, MarkdownEditorOpener { store.send(.markdown(.openInEditor($0))) })
-      .inspectorColumnWidth(min: 280, ideal: 320, max: 480)
+      .inspectorColumnWidth(min: 160, ideal: 320, max: 480)
       // Match the inspector's accent to the terminal background.
       .tint(terminalManager.chromeOverlayTint())
     }
