@@ -160,6 +160,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   public var openFileScript: String
   public var richAgentNotificationsEnabled: Bool
   public var agentPresenceBadgesEnabled: Bool
+  /// Detects the sandbox-restart marker an sclaude/scopilot session prints and, after a
+  /// confirmation dialog, exits the session and runs the extended launcher command line.
+  public var sandboxRestartInjectionEnabled: Bool
   public var confirmQuitMode: ConfirmQuitMode
   /// When true, user-initiated closes ask for confirmation when a terminal
   /// surface has foreground work that Ghostty considers unsafe to interrupt.
@@ -230,6 +233,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     openFileScript: "",
     richAgentNotificationsEnabled: true,
     agentPresenceBadgesEnabled: true,
+    sandboxRestartInjectionEnabled: true,
     confirmQuitMode: .auto,
     confirmCloseSurface: true,
     confirmCloseTab: .busy,
@@ -276,6 +280,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     openFileScript: String = "",
     richAgentNotificationsEnabled: Bool = true,
     agentPresenceBadgesEnabled: Bool = true,
+    sandboxRestartInjectionEnabled: Bool = true,
     confirmQuitMode: ConfirmQuitMode = .auto,
     confirmCloseSurface: Bool = true,
     confirmCloseTab: ConfirmCloseTabMode = .busy,
@@ -326,6 +331,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.openFileScript = openFileScript
     self.richAgentNotificationsEnabled = richAgentNotificationsEnabled
     self.agentPresenceBadgesEnabled = agentPresenceBadgesEnabled
+    self.sandboxRestartInjectionEnabled = sandboxRestartInjectionEnabled
     self.confirmQuitMode = confirmQuitMode
     self.confirmCloseSurface = confirmCloseSurface
     self.confirmCloseTab = confirmCloseTab
@@ -508,6 +514,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     agentPresenceBadgesEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .agentPresenceBadgesEnabled)
       ?? Self.default.agentPresenceBadgesEnabled
+    sandboxRestartInjectionEnabled =
+      try container.decodeIfPresent(Bool.self, forKey: .sandboxRestartInjectionEnabled)
+      ?? Self.default.sandboxRestartInjectionEnabled
     // Reject unrecognized values from corrupted or hand-edited settings files.
     // Legacy `confirmBeforeQuit: false` users explicitly opted out of the
     // dialog; `.auto` would silently re-enable it. Map `false` to `.never`

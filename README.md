@@ -27,6 +27,9 @@
 >   with the workspace picker; ⌥⌘T cycles to the next workspace.
 > - **Favorite editors**: quick-launch buttons for VS Code, Xcode, Typora and Fork (if installed)
 >   are always visible in the toolbar; Typora is added as an editor.
+> - **Sandbox restart**: when an `sclaude` / `scopilot` session (ai-sandbox) asks to restart with
+>   a wider sandbox, a dialog shows the extended command line with the additions highlighted;
+>   Restart exits the session and runs it with `--resume`. Toggle in Settings → Developer.
 >
 > **Improvements**
 >

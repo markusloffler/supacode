@@ -71,7 +71,9 @@ struct LayoutSurfaceConduit {
       host.updateRunningState(for: tabID)
     }
     view.bridge.onCommandFinished = { [weak view] exitCode in
-      guard let view, isLive(view), let tabID = host.tabID(containing: surfaceID) else { return }
+      guard let view, isLive(view) else { return }
+      host.handleSandboxRestartCommandFinished(surfaceID: surfaceID)
+      guard let tabID = host.tabID(containing: surfaceID) else { return }
       host.handleBlockingScriptCommandFinished(tabID: tabID, exitCode: exitCode)
     }
     view.bridge.onChildExited = { [weak view] exitCode in

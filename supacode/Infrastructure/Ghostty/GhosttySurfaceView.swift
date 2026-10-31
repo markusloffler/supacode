@@ -708,17 +708,23 @@ final class GhosttySurfaceView: NSView, Identifiable {
   }
 
   private func readScreenContents() -> String? {
+    readText(GHOSTTY_POINT_SCREEN)
+  }
+
+  /// Plain text of the given region: `GHOSTTY_POINT_VIEWPORT` for what is visible,
+  /// `GHOSTTY_POINT_SCREEN` for the whole screen including scrollback.
+  func readText(_ region: ghostty_point_tag_e) -> String? {
     guard let surface else { return nil }
     var text = ghostty_text_s()
     let selection = ghostty_selection_s(
       top_left: ghostty_point_s(
-        tag: GHOSTTY_POINT_SCREEN,
+        tag: region,
         coord: GHOSTTY_POINT_COORD_TOP_LEFT,
         x: 0,
         y: 0
       ),
       bottom_right: ghostty_point_s(
-        tag: GHOSTTY_POINT_SCREEN,
+        tag: region,
         coord: GHOSTTY_POINT_COORD_BOTTOM_RIGHT,
         x: 0,
         y: 0
@@ -726,7 +732,7 @@ final class GhosttySurfaceView: NSView, Identifiable {
       rectangle: false
     )
     guard ghostty_surface_read_text(surface, selection, &text) else {
-      surfaceLogger.debug("Failed to read screen contents for accessibility.")
+      surfaceLogger.debug("Failed to read terminal text (region \(region.rawValue)).")
       return nil
     }
     defer { ghostty_surface_free_text(surface, &text) }

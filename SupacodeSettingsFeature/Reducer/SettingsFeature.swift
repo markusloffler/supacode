@@ -80,6 +80,7 @@ public struct SettingsFeature {
     public var openFileScript: String
     public var richAgentNotificationsEnabled: Bool
     public var agentPresenceBadgesEnabled: Bool
+    public var sandboxRestartInjectionEnabled: Bool
     public var confirmQuitMode: ConfirmQuitMode
     public var confirmCloseSurface: Bool
     public var confirmCloseTab: ConfirmCloseTabMode
@@ -224,6 +225,7 @@ public struct SettingsFeature {
       openFileScript = settings.openFileScript
       richAgentNotificationsEnabled = settings.richAgentNotificationsEnabled
       agentPresenceBadgesEnabled = settings.agentPresenceBadgesEnabled
+      sandboxRestartInjectionEnabled = settings.sandboxRestartInjectionEnabled
       confirmQuitMode = settings.confirmQuitMode
       confirmCloseSurface = settings.confirmCloseSurface
       confirmCloseTab = settings.confirmCloseTab
@@ -418,6 +420,7 @@ public struct SettingsFeature {
         state.openFileScript = normalizedSettings.openFileScript
         state.richAgentNotificationsEnabled = normalizedSettings.richAgentNotificationsEnabled
         state.agentPresenceBadgesEnabled = normalizedSettings.agentPresenceBadgesEnabled
+        state.sandboxRestartInjectionEnabled = normalizedSettings.sandboxRestartInjectionEnabled
         state.confirmQuitMode = normalizedSettings.confirmQuitMode
         state.confirmCloseSurface = normalizedSettings.confirmCloseSurface
         state.confirmCloseTab = normalizedSettings.confirmCloseTab
@@ -1216,6 +1219,7 @@ extension SettingsFeature.State {
     settings.openFileScript = openFileScript
     settings.richAgentNotificationsEnabled = richAgentNotificationsEnabled
     settings.agentPresenceBadgesEnabled = agentPresenceBadgesEnabled
+    settings.sandboxRestartInjectionEnabled = sandboxRestartInjectionEnabled
     settings.confirmQuitMode = confirmQuitMode
     settings.confirmCloseSurface = confirmCloseSurface
     settings.confirmCloseTab = confirmCloseTab
