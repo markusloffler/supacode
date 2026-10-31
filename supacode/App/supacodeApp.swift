@@ -684,6 +684,17 @@ struct SupacodeApp: App {
         }
         .appKeyboardShortcut(AppShortcuts.commandPalette.effective(from: store.settings.shortcutOverrides))
         .help("Command Palette")
+        Button("Open File…") {
+          guard NSApp.currentEvent?.isAutoRepeatKeyDown != true else { return }
+          store.send(.commandPalette(.togglePresentInMode(.fileSearch)))
+        }
+        .appKeyboardShortcut(AppShortcuts.openFile.effective(from: store.settings.shortcutOverrides))
+        .help(
+          AppShortcut.helpText(
+            "Search the project's files by name",
+            shortcut: AppShortcuts.openFile.effective(from: store.settings.shortcutOverrides)
+          )
+        )
       }
       UpdateCommands(store: store.scope(state: \.updates, action: \.updates))
       CommandGroup(replacing: .singleWindowList) {

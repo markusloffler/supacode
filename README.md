@@ -17,6 +17,10 @@
 >   back to a search of the worktree's git files.
 >   Optionally (Settings → Terminal), double-clicking a Markdown file name opens it in the
 >   Supacode editor. Use Shift+double-click in apps that capture the mouse.
+> - **Open File (⌘⇧O)**: VS Code-style fuzzy search over the selected worktree's files (git's
+>   tracked and untracked-but-not-ignored files). Return opens Markdown in the Supacode editor and
+>   anything else in the repository's editor; VS Code-family editors open it in the window for the
+>   project root. *Open Repository or Folder* loses its ⌘⇧O default (rebind it in Settings).
 > - **Terminal context menu while the mouse is captured**: Shift+right-click shows the context menu
 >   even when a TUI captures the mouse.
 > - **Sidebar workspaces**: file repositories under numbered workspaces and filter the sidebar

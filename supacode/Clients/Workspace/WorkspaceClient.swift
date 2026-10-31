@@ -17,6 +17,14 @@ nonisolated struct WorkspaceClient: Sendable {
       _ fileURL: URL,
       _ action: OpenWorktreeAction?
     ) async -> OpenActionError?
+  /// Opens `fileURL` in `action`'s window for the project at `root` (VS Code
+  /// family, through its bundled CLI); any other editor gets `openFile`.
+  var openFileInProject:
+    @MainActor @Sendable (
+      _ fileURL: URL,
+      _ root: URL,
+      _ action: OpenWorktreeAction?
+    ) async -> OpenActionError?
 }
 
 nonisolated extension WorkspaceClient: DependencyKey {
@@ -29,37 +37,18 @@ nonisolated extension WorkspaceClient: DependencyKey {
       }
     },
     openFile: { fileURL, action in
-      if let action, action.canOpenFiles {
-        // An explicitly picked editor that vanished must surface, not silently
-        // fall back to a different app.
-        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: action.bundleIdentifier)
-        else { return .appNotFound(action) }
-        return await withCheckedContinuation { continuation in
-          NSWorkspace.shared.open(
-            [fileURL],
-            withApplicationAt: appURL,
-            configuration: NSWorkspace.OpenConfiguration()
-          ) { _, error in
-            continuation.resume(returning: error.map { .openFailed(action, $0) })
-          }
-        }
-      }
-      return await withCheckedContinuation { continuation in
-        NSWorkspace.shared.open(fileURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
-          continuation.resume(
-            returning: error.map {
-              OpenActionError(
-                title: "Unable to open \(fileURL.lastPathComponent)",
-                message: $0.localizedDescription
-              )
-            }
-          )
-        }
-      }
+      await WorktreeOpener.openFile(fileURL, action: action)
+    },
+    openFileInProject: { fileURL, root, action in
+      await WorktreeOpener.openFileInProject(fileURL, root: root, action: action)
     }
   )
 
-  static let testValue = WorkspaceClient(open: { _, _, _ in }, openFile: { _, _ in nil })
+  static let testValue = WorkspaceClient(
+    open: { _, _, _ in },
+    openFile: { _, _ in nil },
+    openFileInProject: { _, _, _ in nil }
+  )
 }
 
 nonisolated extension DependencyValues {

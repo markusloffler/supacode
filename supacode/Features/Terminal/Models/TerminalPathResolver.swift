@@ -39,7 +39,7 @@ nonisolated enum TerminalPathResolver {
     workingDirectory: URL?,
     worktreeRoot: URL,
     fileManager: FileManager = .default,
-    listFiles: (URL) -> [String] = Self.worktreeFiles(root:)
+    listFiles: (URL) -> [String] = { Self.worktreeFiles(root: $0) }
   ) -> [URL] {
     // `a/…` / `b/…` are git diff prefixes, not directories.
     var variants = [candidate]
@@ -98,8 +98,9 @@ nonisolated enum TerminalPathResolver {
 
   /// Tracked plus untracked-but-not-ignored files, relative to the root.
   /// Synchronous because a context menu is built synchronously; bounded by
-  /// `searchTimeoutMilliseconds` so a slow repository only costs the search, not the menu.
-  static func worktreeFiles(root: URL) -> [String] {
+  /// `timeoutMilliseconds` so a slow repository only costs the search, not the menu.
+  /// Empty when `root` is not a git work tree.
+  static func worktreeFiles(root: URL, timeoutMilliseconds: Int = searchTimeoutMilliseconds) -> [String] {
     let process = Process()
     process.executableURL = URL(filePath: "/usr/bin/env")
     process.arguments = [
@@ -118,7 +119,7 @@ nonisolated enum TerminalPathResolver {
       if process.isRunning { process.terminate() }
     }
     DispatchQueue.global().asyncAfter(
-      deadline: .now() + .milliseconds(searchTimeoutMilliseconds),
+      deadline: .now() + .milliseconds(timeoutMilliseconds),
       execute: timeout
     )
     let data = output.fileHandleForReading.readDataToEndOfFile()

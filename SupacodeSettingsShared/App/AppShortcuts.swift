@@ -17,7 +17,8 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
   case selectWorktree(Int)
   case selectTab(Int)
   case selectNextTab, selectPreviousTab
-  case openWorktree, revealInFinder, openRepository, addRemoteRepository, cloneRepository, openPullRequest, copyPath
+  case openWorktree, openFile, revealInFinder, openRepository, addRemoteRepository, cloneRepository
+  case openPullRequest, copyPath
   case runScript, stopRunScript, renameTab, toggleWindowMode
   case newTerminalTab, closeTab
   case splitRight, splitLeft, splitDown, splitUp
@@ -38,7 +39,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
       .cycleWorkspace, .newWorktree, .refreshWorktrees, .archivedWorktrees, .confirmWorktreeAction,
       .selectNextWorktree, .selectPreviousWorktree, .worktreeHistoryBack, .worktreeHistoryForward,
       .selectWorktree, .selectTab, .selectNextTab, .selectPreviousTab,
-      .openWorktree, .revealInFinder, .openRepository, .addRemoteRepository, .cloneRepository,
+      .openWorktree, .openFile, .revealInFinder, .openRepository, .addRemoteRepository, .cloneRepository,
       .openPullRequest, .copyPath, .runScript, .stopRunScript, .renameTab, .toggleWindowMode,
       .newTerminalTab, .closeTab, .splitRight, .splitLeft, .splitDown, .splitUp,
       .focusSplitLeft, .focusSplitRight, .focusSplitUp, .focusSplitDown,
@@ -93,6 +94,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .selectNextTab: "selectNextTab"
     case .selectPreviousTab: "selectPreviousTab"
     case .openWorktree: "openWorktree"
+    case .openFile: "openFile"
     case .revealInFinder: "revealInFinder"
     case .openRepository: "openRepository"
     case .addRemoteRepository: "addRemoteRepository"
@@ -149,6 +151,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     "worktreeHistoryBack": .worktreeHistoryBack,
     "worktreeHistoryForward": .worktreeHistoryForward,
     "openWorktree": .openWorktree,
+    "openFile": .openFile,
     "openFinder": .openWorktree,
     "revealInFinder": .revealInFinder,
     "openRepository": .openRepository,
@@ -230,6 +233,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .selectNextTab: "Select Next Tab"
     case .selectPreviousTab: "Select Previous Tab"
     case .openWorktree: "Open Worktree"
+    case .openFile: "Open File"
     case .revealInFinder: "Reveal in Finder"
     case .openRepository: "Open Repository or Folder"
     case .addRemoteRepository: "Add Remote Repository or Folder"
@@ -575,8 +579,12 @@ public enum AppShortcuts {
   )
 
   public static let openWorktree = AppShortcut(id: .openWorktree, key: "o", modifiers: .command)
+  public static let openFile = AppShortcut(id: .openFile, key: "o", modifiers: [.command, .shift])
   public static let revealInFinder = AppShortcut(id: .revealInFinder, key: "r", modifiers: [.command, .option])
-  public static let openRepository = AppShortcut(id: .openRepository, key: "o", modifiers: [.command, .shift])
+  // Disabled by default: ⌘⇧O belongs to Open File.
+  public static let openRepository = AppShortcut(
+    id: .openRepository, key: "o", modifiers: [.command, .shift], isEnabledByDefault: false
+  )
   public static let addRemoteRepository = AppShortcut(
     id: .addRemoteRepository, key: "k", modifiers: [.command, .shift]
   )
@@ -722,7 +730,7 @@ public enum AppShortcuts {
     AppShortcutGroup(
       category: .actions,
       shortcuts: [
-        openWorktree, revealInFinder, openRepository, addRemoteRepository, cloneRepository,
+        openWorktree, openFile, revealInFinder, openRepository, addRemoteRepository, cloneRepository,
         openPullRequest, copyPath, runScript, stopRunScript, jumpToLatestUnread,
         togglePullRequestInspector, toggleFilesInspector, toggleNotificationsInspector,
         toggleMarkdownReadMode,

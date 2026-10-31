@@ -11,12 +11,14 @@ struct CommandPaletteFeature {
   /// Two narrow surfaces sharing one palette UI. `.commands` is the full
   /// command palette (scripts, ghostty actions, PR actions, settings);
   /// `.worktreeSwitcher` shows only worktrees, sorted by
-  /// `RepositoriesFeature.State.worktreeMRU`. Mode lives in State so the
+  /// `RepositoriesFeature.State.worktreeMRU`; `.fileSearch` lists the selected
+  /// worktree's files (`State.projectFiles`). Mode lives in State so the
   /// items builder, the view, and the dismiss handler all read the same
   /// source of truth.
   enum PaletteMode: Equatable, Sendable {
     case commands
     case worktreeSwitcher
+    case fileSearch
   }
 
   @ObservableState
@@ -26,6 +28,7 @@ struct CommandPaletteFeature {
     var query = ""
     var selectedIndex: Int?
     var recencyByItemID: [CommandPaletteItem.ID: TimeInterval] = [:]
+    var projectFiles: ProjectFiles?
   }
 
   enum SelectionMove: Equatable {
@@ -46,6 +49,9 @@ struct CommandPaletteFeature {
     case resetSelection(itemsCount: Int, defaultIndex: Int)
     case moveSelection(SelectionMove, itemsCount: Int)
     case pruneRecency([CommandPaletteItem.ID])
+    /// Sent by `AppFeature` once it resolves the selected worktree's root for `.fileSearch`.
+    case loadProjectFiles(root: URL)
+    case projectFilesLoaded(root: URL, files: [ProjectFileCandidate])
     case delegate(Delegate)
   }
 
@@ -77,6 +83,9 @@ struct CommandPaletteFeature {
     case openFailingCheckDetails(Worktree.ID)
     case runScript(ScriptDefinition)
     case stopScript(UUID, name: String)
+    /// `.fileSearch` opened; `AppFeature` answers with `loadProjectFiles` or a dismiss.
+    case projectFilesRequested
+    case openProjectFile(URL, root: URL)
     /// Palette closed without the user activating an item (Esc, outside
     /// tap, programmatic dismiss). AppFeature uses this to refocus the
     /// current worktree's terminal, the "terminal is the default
@@ -88,6 +97,9 @@ struct CommandPaletteFeature {
   }
 
   @Dependency(\.date.now) private var now
+  @Dependency(\.fileExplorerClient) private var fileExplorerClient
+
+  private nonisolated enum CancelID: Hashable, Sendable { case projectFiles }
 
   var body: some Reducer<State, Action> {
     BindingReducer()
@@ -123,6 +135,9 @@ struct CommandPaletteFeature {
         loadRecency(into: &state)
         state.query = ""
         state.selectedIndex = nil
+        if mode == .fileSearch {
+          return .send(.delegate(.projectFilesRequested))
+        }
         return .none
 
       case .activateItem(let item):
@@ -174,10 +189,40 @@ struct CommandPaletteFeature {
 
       case .pruneRecency(let ids):
         let idSet = Set(ids)
-        let pruned = state.recencyByItemID.filter { idSet.contains($0.key) }
+        // Opened files are keyed by absolute path, so they outlive the retention list;
+        // keep only the most recent few.
+        let recentFileIDs = Set(
+          state.recencyByItemID
+            .filter { ProjectFileCandidate.isFileID($0.key) }
+            .sorted { $0.value > $1.value }
+            .prefix(Self.recentProjectFileLimit)
+            .map(\.key)
+        )
+        let pruned = state.recencyByItemID.filter { idSet.contains($0.key) || recentFileIDs.contains($0.key) }
         guard pruned != state.recencyByItemID else { return .none }
         state.recencyByItemID = pruned
         saveRecency(pruned)
+        return .none
+
+      case .loadProjectFiles(let root):
+        if state.projectFiles?.root == root {
+          state.projectFiles?.isLoading = true
+        } else {
+          state.projectFiles = ProjectFiles(root: root)
+        }
+        commandPaletteLogger.debug("Loading project files in \(root.lastPathComponent).")
+        return .run { [fileExplorerClient] send in
+          let paths = await fileExplorerClient.listProjectFiles(root)
+          let files = await Self.makeCandidates(paths: paths, root: root)
+          await send(.projectFilesLoaded(root: root, files: files))
+        }
+        .cancellable(id: CancelID.projectFiles, cancelInFlight: true)
+
+      case .projectFilesLoaded(let root, let files):
+        // A listing for a project the user already switched away from is stale.
+        guard state.projectFiles?.root == root else { return .none }
+        state.projectFiles?.files = files
+        state.projectFiles?.isLoading = false
         return .none
 
       case .delegate:
@@ -205,6 +250,10 @@ struct CommandPaletteFeature {
     recencyByID: [CommandPaletteItem.ID: TimeInterval] = [:],
     now: Date = .now
   ) -> [CommandPaletteItem] {
+    if mode == .fileSearch {
+      // The overlay ranks files in the background (`rankProjectFiles`); same order here.
+      return (rankedProjectFileIndices(items, query: query, recencyByID: recencyByID, now: now) ?? []).map { items[$0] }
+    }
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else {
       switch mode {
@@ -217,9 +266,11 @@ struct CommandPaletteFeature {
         // The switcher is a navigation surface: every worktree row is visible
         // with no query, already ordered MRU-first via `priorityTier`.
         return prioritizeItems(items: items, recencyByID: recencyByID, now: now)
+      case .fileSearch:
+        return []  // Ranked above.
       }
     }
-    let scorer = CommandPaletteFuzzyScorer(query: trimmed, recencyByID: recencyByID, now: now)
+    let scorer = CommandPaletteFuzzyScorer<CommandPaletteItem>(query: trimmed, recencyByID: recencyByID, now: now)
     return scorer.rankedItems(from: items)
   }
 
@@ -453,7 +504,8 @@ struct CommandPaletteFeature {
     from repositories: RepositoriesFeature.State,
     ghosttyCommands: [GhosttyCommand] = [],
     scripts: [ScriptDefinition] = [],
-    runningScriptIDs: Set<UUID> = []
+    runningScriptIDs: Set<UUID> = [],
+    projectFiles: ProjectFiles? = nil
   ) -> [CommandPaletteItem] {
     switch mode {
     case .commands:
@@ -465,6 +517,8 @@ struct CommandPaletteFeature {
       )
     case .worktreeSwitcher:
       return worktreeSwitcherItems(from: repositories)
+    case .fileSearch:
+      return projectFiles.map(projectFileItems(from:)) ?? []
     }
   }
 
@@ -851,7 +905,7 @@ private func prioritizeItems(
   now: Date
 ) -> [CommandPaletteItem] {
   let scored = items.enumerated().map { index, item in
-    (item: item, index: index, recency: commandPaletteRecencyScore(item, recencyByID: recencyByID, now: now))
+    (item: item, index: index, recency: commandPaletteRecencyScore(item.id, recencyByID: recencyByID, now: now))
   }
   let sorted = scored.sorted { left, right in
     if left.item.priorityTier != right.item.priorityTier {
@@ -865,12 +919,12 @@ private func prioritizeItems(
   return sorted.map(\.item)
 }
 
-private func commandPaletteRecencyScore(
-  _ item: CommandPaletteItem,
+nonisolated private func commandPaletteRecencyScore(
+  _ id: CommandPaletteItem.ID,
   recencyByID: [CommandPaletteItem.ID: TimeInterval],
   now: Date
 ) -> Double {
-  guard let lastActivated = recencyByID[item.id] else { return 0 }
+  guard let lastActivated = recencyByID[id] else { return 0 }
   let ageSeconds = max(0, now.timeIntervalSince1970 - lastActivated)
   let ageDays = ageSeconds / 86_400
   let cappedAgeDays = min(ageDays, 30)
@@ -915,6 +969,8 @@ private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPalette
     return pullRequestDelegateAction(for: kind)!
   case .runScript, .stopScript:
     return scriptDelegateAction(for: kind)!
+  case .openProjectFile(let url, let root):
+    return .openProjectFile(url, root: root)
   #if DEBUG
     case .debugTestToast(let toast):
       return .debugTestToast(toast)
@@ -943,7 +999,7 @@ private func selectedEntryDelegateAction(
     .newWorktree, .removeWorktree, .archiveWorktree, .viewArchivedWorktrees, .refreshWorktrees,
     .ghosttyCommand, .openPullRequest, .markPullRequestReady, .mergePullRequest,
     .closePullRequest, .copyFailingJobURL, .copyCiFailureLogs, .rerunFailedJobs,
-    .openFailingCheckDetails, .runScript, .stopScript:
+    .openFailingCheckDetails, .runScript, .stopScript, .openProjectFile:
     return nil
   #if DEBUG
     case .debugTestToast:
@@ -1002,7 +1058,8 @@ private func pullRequestDelegateAction(
     .ghosttyCommand,
     .toggleWindowMode,
     .runScript,
-    .stopScript:
+    .stopScript,
+    .openProjectFile:
     return nil
   #if DEBUG
     case .debugTestToast:
@@ -1097,7 +1154,18 @@ private func saveRecency(_ recencyByItemID: [CommandPaletteItem.ID: TimeInterval
   }
 }
 
-private struct CommandPaletteFuzzyScorer {
+/// The fields the fuzzy scorer ranks on, so file-search candidates can be scored
+/// off the main actor without building full palette items.
+nonisolated protocol CommandPaletteScorable {
+  var id: String { get }
+  var title: String { get }
+  var subtitle: String? { get }
+  var priorityTier: Int { get }
+}
+
+extension CommandPaletteItem: CommandPaletteScorable {}
+
+nonisolated struct CommandPaletteFuzzyScorer<Item: CommandPaletteScorable> {
   private struct PreparedQueryPiece {
     let normalized: String
     let normalizedLowercase: String
@@ -1121,7 +1189,7 @@ private struct CommandPaletteFuzzyScorer {
   }
 
   private struct ScoredItem {
-    let item: CommandPaletteItem
+    let item: Item
     let score: ItemScore
     let recencyScore: Double
     let index: Int
@@ -1135,20 +1203,20 @@ private struct CommandPaletteFuzzyScorer {
   // clamped to `maxIntraTierScore`, so a single query piece can never bleed into
   // the tier above. Multi-word queries sum per-piece tiered scores, so this
   // strict ordering is a single-piece guarantee.
-  private static let maxIntraTierScore = (1 << 14) - 1
-  private static let labelPrefixScoreThreshold = 1 << 17
-  private static let labelSubstringScoreThreshold = (1 << 16) + (1 << 15)
-  private static let subtitleDirectScoreThreshold = (1 << 16) + (1 << 14)
-  private static let labelScoreThreshold = 1 << 16
+  private static var maxIntraTierScore: Int { (1 << 14) - 1 }
+  private static var labelPrefixScoreThreshold: Int { 1 << 17 }
+  private static var labelSubstringScoreThreshold: Int { (1 << 16) + (1 << 15) }
+  private static var subtitleDirectScoreThreshold: Int { (1 << 16) + (1 << 14) }
+  private static var labelScoreThreshold: Int { 1 << 16 }
 
   private let query: PreparedQuery
   private let allowNonContiguousMatches: Bool
-  private let recencyByID: [CommandPaletteItem.ID: TimeInterval]
+  private let recencyByID: [String: TimeInterval]
   private let now: Date
 
   init(
     query: String,
-    recencyByID: [CommandPaletteItem.ID: TimeInterval],
+    recencyByID: [String: TimeInterval],
     now: Date,
     allowNonContiguousMatches: Bool = true
   ) {
@@ -1158,23 +1226,28 @@ private struct CommandPaletteFuzzyScorer {
     self.now = now
   }
 
-  func rankedItems(from items: [CommandPaletteItem]) -> [CommandPaletteItem] {
-    let scoredItems = items.enumerated().compactMap { index, item in
-      let score = scoreItem(item)
-      return score.score > 0
-        ? ScoredItem(
-          item: item,
-          score: score,
-          recencyScore: recencyScore(for: item),
-          index: index
-        )
-        : nil
-    }
-    let sorted = scoredItems.sorted { compare($0, $1) < 0 }
-    return sorted.map(\.item)
+  func rankedItems(from items: [Item]) -> [Item] {
+    (rankedIndices(from: items) ?? []).map { items[$0] }
   }
 
-  private func scoreItem(_ item: CommandPaletteItem) -> ItemScore {
+  /// Indices of the matching `items`, best first; `nil` once `isCancelled` reports
+  /// true, so a superseded background search stops early.
+  func rankedIndices(from items: [Item], isCancelled: () -> Bool = { false }) -> [Int]? {
+    var scoredItems: [ScoredItem] = []
+    for (index, item) in items.enumerated() {
+      if index.isMultiple(of: 1024), isCancelled() { return nil }
+      let score = scoreItem(item)
+      guard score.score > 0 else { continue }
+      scoredItems.append(
+        ScoredItem(item: item, score: score, recencyScore: recencyScore(for: item), index: index)
+      )
+    }
+    guard !isCancelled() else { return nil }
+    let sorted = scoredItems.sorted { compare($0, $1) < 0 }
+    return sorted.map(\.index)
+  }
+
+  private func scoreItem(_ item: Item) -> ItemScore {
     guard !query.piece.normalized.isEmpty else {
       return ItemScore(score: 0, labelMatch: nil, descriptionMatch: nil)
     }
@@ -1438,7 +1511,7 @@ private struct CommandPaletteFuzzyScorer {
     return matchLengthB < matchLengthA ? 1 : -1
   }
 
-  private func fallbackCompare(_ itemA: CommandPaletteItem, _ itemB: CommandPaletteItem) -> Int {
+  private func fallbackCompare(_ itemA: Item, _ itemB: Item) -> Int {
     let labelA = itemA.title
     let labelB = itemB.title
     let descriptionA = itemA.subtitle
@@ -1473,8 +1546,8 @@ private struct CommandPaletteFuzzyScorer {
     }
   }
 
-  private func recencyScore(for item: CommandPaletteItem) -> Double {
-    commandPaletteRecencyScore(item, recencyByID: recencyByID, now: now)
+  private func recencyScore(for item: Item) -> Double {
+    commandPaletteRecencyScore(item.id, recencyByID: recencyByID, now: now)
   }
 
   private func scoreFuzzy(

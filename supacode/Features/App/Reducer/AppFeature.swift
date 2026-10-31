@@ -2146,6 +2146,7 @@ struct AppFeature {
     core
     // MARK: Markdown editor
     MarkdownAppReducer()
+    FileSearchAppReducer()
     Scope(state: \.terminals, action: \.terminals) {
       TerminalsFeature()
     }
