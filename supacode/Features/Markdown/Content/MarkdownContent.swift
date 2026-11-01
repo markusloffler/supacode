@@ -49,14 +49,22 @@ final class MarkdownContent: TabContent {
     ContentSnapshot(id: id, state: .markdown(state))
   }
 
-  /// Focuses the editor of a live Markdown content, if `id` is one.
+  /// Focuses the editor of a live Markdown or code editor content, if `id` is one.
   static func focusEditor(_ id: ContentID, runtime: ContentRuntime) {
-    (runtime.content(for: id) as? MarkdownContent)?.model.focusEditor()
+    switch runtime.content(for: id) {
+    case let markdown as MarkdownContent: markdown.model.focusEditor()
+    case let code as CodeEditorContent: code.model.focusEditor()
+    default: break
+    }
   }
 
   /// Publishes a Prompt Edit status to the editor that sent it.
   static func setPromptEditStatus(_ status: PromptEditStatus?, for id: ContentID, runtime: ContentRuntime) {
-    (runtime.content(for: id) as? MarkdownContent)?.model.promptEditStatus = status
+    switch runtime.content(for: id) {
+    case let markdown as MarkdownContent: markdown.model.promptEditStatus = status
+    case let code as CodeEditorContent: code.model.promptEditStatus = status
+    default: break
+    }
   }
 }
 
@@ -77,10 +85,7 @@ final class MarkdownTabChrome: TabChrome {
     return AnyView(MarkdownDirtyDot())
   }
 
-  var isWorking: Bool {
-    if case .queued = model.promptEditStatus { return true }
-    return false
-  }
+  var isWorking: Bool { model.isPromptEditQueued }
 
   var progress: TerminalTabProgressDisplay? { nil }
 
@@ -90,7 +95,7 @@ final class MarkdownTabChrome: TabChrome {
 }
 
 /// Unsaved-changes marker before the tab title.
-private struct MarkdownDirtyDot: View {
+struct MarkdownDirtyDot: View {
   var body: some View {
     Circle()
       .fill(.secondary)

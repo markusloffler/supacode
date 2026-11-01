@@ -8,7 +8,7 @@ import SwiftUI
 final class PromptEditController {
   private static let logger = SupaLogger("PromptEdit")
 
-  weak var model: MarkdownEditorModel?
+  weak var host: (any PromptEditHost)?
   private var popover: NSPopover?
 
   nonisolated init() {}
@@ -20,7 +20,7 @@ final class PromptEditController {
   func buildContextMenu(_ menu: NSMenu, selection range: NSRange) -> NSMenu {
     let item = NSMenuItem(title: "Prompt Edit…", action: nil, keyEquivalent: "")
     item.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
-    let targets = model?.promptEditTargets() ?? []
+    let targets = host?.promptEditTargets() ?? []
     if range.length == 0 {
       item.toolTip = "Select text to describe a change for a coding agent."
     } else if targets.isEmpty {
@@ -46,7 +46,7 @@ final class PromptEditController {
   }
 
   private func present(range: NSRange, targets: [PromptEditTarget]) {
-    guard let model, let textView = model.textView else { return }
+    guard let model = host, let textView = model.textView else { return }
     guard
       let selection = PromptEditPayload.selection(
         in: model.document.text, range: range, relativePath: model.relativePath)
@@ -79,7 +79,7 @@ final class PromptEditController {
     focusesAgent: Bool
   ) {
     dismiss()
-    guard let model else { return }
+    guard let model = host else { return }
     // The agent must read what the user sees.
     model.document.save()
     let lines = "\(selection.lines.lowerBound)-\(selection.lines.upperBound)"

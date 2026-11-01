@@ -577,7 +577,9 @@ private struct CommandPaletteRowView: View {
       base = "Stop \(name)"
     case .openProjectFile(let url, _):
       base =
-        MarkdownOpenRouter.isMarkdown(url) ? "Open in the Supacode Markdown editor" : "Open in the project's editor"
+        MarkdownOpenRouter.isMarkdown(url)
+        ? "Open in the Supacode Markdown editor"
+        : "Open text files in the Supacode editor, others in the project's editor"
     #if DEBUG
       case .debugTestToast:
         base = row.title

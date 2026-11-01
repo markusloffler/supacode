@@ -40,7 +40,7 @@ extension GhosttySurfaceView {
       let context = pathMenuContext?(), context.doubleClickOpensMarkdown
     else { return }
     let matches = resolveSelectedPath(context: context)
-    guard matches.count == 1, let url = matches.first, MarkdownOpenRouter.isMarkdown(url) else { return }
+    guard matches.count == 1, let url = matches.first, MarkdownOpenRouter.opensInEditor(url) else { return }
     pathMenuLogger.info("[USER] Double-clicked \(url.lastPathComponent), opening in Supacode Editor")
     onOpenPath?(.markdownEditor(url))
   }
@@ -68,7 +68,7 @@ extension GhosttySurfaceView {
         pathItem("Open with \(primary.labelTitle)", #selector(openPathWith(_:)), PathPayload(url: url, action: primary))
       )
     }
-    if MarkdownOpenRouter.isMarkdown(url) {
+    if MarkdownOpenRouter.opensInEditor(url) {
       let item = pathItem("Open in Supacode Editor", #selector(openPathInMarkdownEditor(_:)), PathPayload(url: url))
       item.image = NSImage(systemSymbolName: "doc.text", accessibilityDescription: nil)
       items.append(item)

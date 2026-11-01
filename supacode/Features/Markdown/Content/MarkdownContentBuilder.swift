@@ -21,6 +21,18 @@ struct MarkdownContentBuilder {
     }
     let worktreeID = request.worktreeID
     let targets = promptEditTargets
+    // MARK: Code editor
+    guard MarkdownOpenRouter.isMarkdown(URL(filePath: state.relativePath)) else {
+      let model = CodeEditorModel(
+        contentID: request.contentID,
+        worktreeID: worktreeID,
+        relativePath: state.relativePath,
+        fileURL: state.fileURL(in: root),
+        promptEditTargets: { targets(worktreeID) },
+        send: send
+      )
+      return CodeEditorContent(id: request.contentID, state: state, model: model)
+    }
     let model = MarkdownEditorModel(
       contentID: request.contentID,
       worktreeID: worktreeID,

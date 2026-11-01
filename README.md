@@ -11,15 +11,19 @@
 >   appearance; uses a GitHub theme. Select text and choose *Prompt Edit…* to send an edit
 >   instruction with the file path and line range to a coding agent of the worktree, queued until
 >   the agent is idle.
+> - **Text and code editor**: any other text file (UTF-8, up to 2 MB) opens in the same editor
+>   pane, monospaced with highlight.js syntax colouring, a find/replace bar (⌘F, ⌥⌘F) and a soft
+>   wrap toggle. Autosave, reload on external changes and *Prompt Edit…* work like in the Markdown
+>   editor.
 > - **Open paths from the terminal**: right-click a filename or path in the terminal to open it in
 >   the default editor, *Open With*, the Markdown editor, locate it in the File Inspector, or
 >   reveal it in Finder. Relative names are resolved against the cwd and the worktree, falling
 >   back to a search of the worktree's git files.
->   Optionally (Settings → Terminal), double-clicking a Markdown file name opens it in the
+>   Optionally (Settings → Terminal), double-clicking a Markdown or text file name opens it in the
 >   Supacode editor. Use Shift+double-click in apps that capture the mouse.
 > - **Open File (⌘⇧O)**: VS Code-style fuzzy search over the selected worktree's files (git's
->   tracked and untracked-but-not-ignored files). Return opens Markdown in the Supacode editor and
->   anything else in the repository's editor; VS Code-family editors open it in the window for the
+>   tracked and untracked-but-not-ignored files). Return opens Markdown and text files in the Supacode
+>   editor and anything else in the repository's editor; VS Code-family editors open it in the window for the
 >   project root. *Open Repository or Folder* loses its ⌘⇧O default (rebind it in Settings).
 > - **Terminal context menu while the mouse is captured**: Shift+right-click shows the context menu
 >   even when a TUI captures the mouse.

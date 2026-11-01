@@ -94,7 +94,7 @@ struct MarkdownAppReducer: Reducer {
       Self.logger.warning("openInEditor: \(fileURL.path(percentEncoded: false)) is outside the worktree")
       return .none
     }
-    Self.logger.info("[USER] Opened markdown file in editor: \(relativePath)")
+    Self.logger.info("[USER] Opened file in editor: \(relativePath)")
     let layoutState = state.terminals.layouts[id: worktree.id]
     let layout = layoutState?.layout ?? PaneLayout()
     let route = MarkdownOpenRouter.route(
@@ -107,7 +107,8 @@ struct MarkdownAppReducer: Reducer {
     let focusedContentID = layout.focusedPaneID.flatMap { layout.panes[id: $0]?.selectedTab?.content.id }
     let spec = NewTabSpec(
       title: content.fileName,
-      icon: "doc.text",
+      // MARK: Code editor
+      icon: MarkdownOpenRouter.isMarkdown(fileURL) ? "doc.text" : "chevron.left.forwardslash.chevron.right",
       content: .markdown(content),
       geometry: contentRuntime.spawnGeometry(near: focusedContentID)
     )

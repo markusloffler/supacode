@@ -967,10 +967,8 @@ private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPalette
     .rerunFailedJobs,
     .openFailingCheckDetails:
     return pullRequestDelegateAction(for: kind)!
-  case .runScript, .stopScript:
-    return scriptDelegateAction(for: kind)!
-  case .openProjectFile(let url, let root):
-    return .openProjectFile(url, root: root)
+  case .runScript, .stopScript, .openProjectFile:
+    return scriptOrFileDelegateAction(for: kind)!
   #if DEBUG
     case .debugTestToast(let toast):
       return .debugTestToast(toast)
@@ -1008,7 +1006,9 @@ private func selectedEntryDelegateAction(
   }
 }
 
-private func scriptDelegateAction(
+/// Script and project-file delegates, grouped to keep the main dispatch under
+/// the cyclomatic-complexity limit.
+private func scriptOrFileDelegateAction(
   for kind: CommandPaletteItem.Kind
 ) -> CommandPaletteFeature.Delegate? {
   switch kind {
@@ -1016,6 +1016,8 @@ private func scriptDelegateAction(
     return .runScript(definition)
   case .stopScript(let scriptID, let name):
     return .stopScript(scriptID, name: name)
+  case .openProjectFile(let url, let root):
+    return .openProjectFile(url, root: root)
   default:
     return nil
   }

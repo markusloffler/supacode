@@ -53,7 +53,7 @@ struct MarkdownEditorView: View {
     let style = MarkdownEditorStyle.resolve(themeChoice)
     return VStack(spacing: 0) {
       MarkdownDocumentBanner(document: document)
-      MarkdownPromptEditStatusBar(model: model)
+      PromptEditStatusBar(model: model)
       if let loadError = document.loadError {
         ContentUnavailableView {
           Label("Cannot Open \(model.fileName)", systemImage: "doc.questionmark")
@@ -130,7 +130,7 @@ private struct MarkdownModeToggle: View {
 
 /// Disk-side problems that need a decision: an external change over unsaved
 /// edits, a deleted file, or a failed save.
-private struct MarkdownDocumentBanner: View {
+struct MarkdownDocumentBanner: View {
   let document: MarkdownDocument
 
   private static let logger = SupaLogger("MarkdownEditor")
@@ -180,92 +180,9 @@ private struct MarkdownDocumentBanner: View {
   }
 }
 
-/// The editor's latest Prompt Edit: queued (cancellable), sent, or failed.
-private struct MarkdownPromptEditStatusBar: View {
-  let model: MarkdownEditorModel
-
-  var body: some View {
-    Group {
-      switch model.promptEditStatus {
-      case .queued(_, let agent):
-        StatusBar(
-          message: "Prompt edit queued until \(agent.displayName) is ready.",
-          systemImage: "clock",
-          showsProgress: true
-        ) {
-          Button("Cancel") { model.cancelQueuedPromptEdit() }
-            .help("Cancel the queued prompt edit.")
-        }
-      case .sent(let agent):
-        StatusBar(message: "Prompt edit sent to \(agent.displayName).", systemImage: "checkmark.circle") {
-          EmptyView()
-        }
-      case .failed(let message):
-        StatusBar(message: message, systemImage: "exclamationmark.triangle") {
-          Button("Dismiss") { model.dismissPromptEditStatus() }
-            .help("Hide this message.")
-        }
-      case nil:
-        EmptyView()
-      }
-    }
-    .task(id: model.promptEditStatus) {
-      guard case .sent = model.promptEditStatus else { return }
-      try? await Task.sleep(for: .seconds(4))
-      guard !Task.isCancelled else { return }
-      model.dismissPromptEditStatus()
-    }
-  }
-}
-
-/// A thin message row docked above the editor.
-private struct StatusBar<Actions: View>: View {
-  let message: String
-  let systemImage: String
-  var showsProgress = false
-  let actions: Actions
-
-  init(
-    message: String,
-    systemImage: String,
-    showsProgress: Bool = false,
-    @ViewBuilder actions: () -> Actions
-  ) {
-    self.message = message
-    self.systemImage = systemImage
-    self.showsProgress = showsProgress
-    self.actions = actions()
-  }
-
-  var body: some View {
-    HStack(spacing: 8) {
-      if showsProgress {
-        ProgressView()
-          .controlSize(.small)
-      } else {
-        Image(systemName: systemImage)
-          .foregroundStyle(.secondary)
-          .accessibilityHidden(true)
-      }
-      Text(message)
-        .font(.callout)
-        .lineLimit(2)
-      Spacer(minLength: 8)
-      actions
-        .controlSize(.small)
-    }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 6)
-    .background(.bar)
-    .overlay(alignment: .bottom) {
-      Divider()
-    }
-  }
-}
-
 extension MarkdownEditorAppearance {
   /// Nil follows the window, i.e. the app's appearance.
-  fileprivate var nsAppearance: NSAppearance? {
+  var nsAppearance: NSAppearance? {
     switch self {
     case .system: nil
     case .light: NSAppearance(named: .aqua)

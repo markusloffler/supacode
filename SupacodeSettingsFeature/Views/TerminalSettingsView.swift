@@ -79,9 +79,9 @@ public struct TerminalSettingsView: View {
       }
       Section("Mouse") {
         Toggle(isOn: $store.terminalDoubleClickOpensMarkdown) {
-          Text("Double-click opens Markdown files")
+          Text("Double-click opens Markdown and text files")
           Text(
-            "Double-clicking a Markdown file name in a terminal opens it in the Supacode editor. "
+            "Double-clicking a Markdown or text file name in a terminal opens it in the Supacode editor. "
               + "Use Shift+double-click in apps that capture the mouse, like Claude Code."
           )
         }

@@ -30,8 +30,8 @@ public struct GlobalScriptsSettingsView: View {
 
         // MARK: Markdown editor
         Section {
-          Toggle("Open Markdown files in built-in editor", isOn: Binding($markdownEditorEnabled))
-            .help("Double-clicked .md files open in an editor pane instead of the open-file script.")
+          Toggle("Open Markdown and text files in built-in editor", isOn: Binding($markdownEditorEnabled))
+            .help("Clicked .md and other text files open in an editor pane instead of the open-file script.")
           Picker("Editor theme", selection: Binding($markdownEditorTheme)) {
             ForEach(MarkdownEditorThemeChoice.allCases) { Text($0.title).tag($0) }
           }

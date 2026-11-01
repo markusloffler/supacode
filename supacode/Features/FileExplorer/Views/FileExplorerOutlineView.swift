@@ -932,14 +932,16 @@ extension FileExplorerOutlineView.Coordinator: NSMenuDelegate {
       markdownEditorEnabled,
       let entry = item.entry, !entry.isDirectory,
       let open = actions?.openInMarkdownEditor,
-      let url = url(for: item.path), MarkdownOpenRouter.isMarkdown(url)
+      let url = url(for: item.path), MarkdownOpenRouter.opensInEditor(url)
     else { return false }
     open(url)
     return true
   }
 
   fileprivate func addMarkdownEditorItem(to menu: NSMenu, path: String) {
-    guard actions?.openInMarkdownEditor != nil, MarkdownOpenRouter.isMarkdown(URL(filePath: path)) else { return }
+    guard let url = url(for: path), actions?.openInMarkdownEditor != nil, MarkdownOpenRouter.opensInEditor(url) else {
+      return
+    }
     menu.addItem(
       makeItem(
         "Open in Supacode Editor", action: #selector(contextMenuOpenInMarkdownEditor(_:)), symbolName: "doc.text",

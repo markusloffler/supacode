@@ -20,6 +20,12 @@ enum MarkdownOpenRouter {
     fileExtensions.contains(url.pathExtension.lowercased())
   }
 
+  // MARK: Code editor
+  /// Markdown, or any other text file the code editor takes (sniffed by content).
+  static func opensInEditor(_ url: URL) -> Bool {
+    isMarkdown(url) || TextFileSniffer.isEditableText(url)
+  }
+
   /// `fileURL`'s path relative to `root`; nil when it lies outside.
   static func relativePath(of fileURL: URL, under root: URL) -> String? {
     let candidates = [

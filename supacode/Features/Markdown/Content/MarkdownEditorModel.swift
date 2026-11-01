@@ -3,20 +3,12 @@ import Observation
 import Sharing
 import SupacodeSettingsShared
 
-/// Where the editor's latest Prompt Edit stands; written by `AppFeature`.
-enum PromptEditStatus: Equatable {
-  /// Waiting for the agent's turn to end.
-  case queued(requestID: UUID, agent: SkillAgent)
-  case sent(agent: SkillAgent)
-  case failed(String)
-}
-
 /// Live state of one Markdown editor tab: the document, the Prompt Edit
 /// status, the read/edit mode, and the AppKit plumbing (focus, ⌘S, ⌘/) around
 /// the engine's text view.
 @MainActor
 @Observable
-final class MarkdownEditorModel {
+final class MarkdownEditorModel: PromptEditHost {
   private static let logger = SupaLogger("MarkdownEditor")
 
   let contentID: ContentID
@@ -54,7 +46,7 @@ final class MarkdownEditorModel {
     self.document = MarkdownDocument(fileURL: fileURL)
     self.promptEditTargets = promptEditTargets
     self.send = send
-    promptEdit.model = self
+    promptEdit.host = self
   }
 
   nonisolated deinit {}
@@ -116,16 +108,6 @@ final class MarkdownEditorModel {
         MarkdownScrollAnchor.restore(anchor, in: textView)
       }
     }
-  }
-
-  func cancelQueuedPromptEdit() {
-    guard case .queued(let requestID, _) = promptEditStatus else { return }
-    Self.logger.info("[USER] Cancelled queued prompt edit for \(relativePath)")
-    send(.promptEditCancelled(requestID))
-  }
-
-  func dismissPromptEditStatus() {
-    promptEditStatus = nil
   }
 
   private func installKeyMonitor() {

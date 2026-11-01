@@ -37,7 +37,7 @@ struct FileSearchAppReducer: Reducer {
 
   private func open(_ url: URL, root: URL, state: State) -> Effect<Action> {
     Self.logger.info("[USER] Opened \(url.lastPathComponent) from the file search.")
-    guard !MarkdownOpenRouter.isMarkdown(url) else {
+    guard !MarkdownOpenRouter.opensInEditor(url) else {
       var effects: [Effect<Action>] = [.send(.markdown(.openInEditor(url)))]
       if let worktreeID = state.repositories.selectedWorktreeID {
         effects.append(

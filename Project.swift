@@ -51,6 +51,7 @@ let appDependencies: [TargetDependency] = [
   .external(name: "Sparkle"),
   // MARK: Markdown editor
   .external(name: "MarkdownEngine"),
+  .external(name: "MarkdownEngineCodeBlocks"),
 ]
 
 let testDependencies: [TargetDependency] = [
