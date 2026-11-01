@@ -81,6 +81,7 @@ The layout layer is already content-agnostic (`TabContent` protocol, `ContentRun
 
 - Load/save UTF-8, preserve trailing newline and line endings.
 - Save: debounced autosave (injected clock) + `⌘S`; atomic write.
+- Find: the standard AppKit find bar (`usesFindBar`, enabled on first use) in edit and read mode. ⌘F / ⌥⌘F (replace) / ⌘G / ⇧⌘G / ⌘E are caught by the editor's key monitor while the text view or its find bar has focus, since the app menu binds ⌘F to terminal search.
 - File watcher (`DispatchSource.makeFileSystemObjectSource`, re-armed on rename/delete because agents and editors write atomically):
   - buffer clean → reload silently, keep caret/scroll position as far as possible
   - buffer dirty → inline banner "File changed on disk — Reload / Keep mine"
@@ -204,7 +205,7 @@ Deviations from the plan:
 
 ## Read Mode (2026-10-30)
 
-- Toggle per editor: floating button top-right, or ⌘/ while the editor has focus (shift tolerated, so ⇧⌘7 on German layouts works).
+- Toggle per editor: floating button bottom-right (clear of the find bar), or ⌘/ while the editor has focus (shift tolerated, so ⇧⌘7 on German layouts works).
 - Read mode passes the engine `isEditable: false` and a copy of the text with soft line breaks joined (`MarkdownSoftBreaks`): each joined `\n` becomes a space, so the copy has the source's UTF-16 length and selections map 1:1 to the file. Line-based approximation: no joins across blank lines, block starts (heading, list, quote, table, rule, HTML), code, hard breaks, or setext underlines. Quote continuations (`> a` / `> b`) stay separate.
 - Prompt Edit works in both modes; line numbers are computed from the source text, not the text view.
 - Scroll position: the top visible line's character index is captured before the toggle and restored after the engine re-lays out (`MarkdownScrollAnchor`).

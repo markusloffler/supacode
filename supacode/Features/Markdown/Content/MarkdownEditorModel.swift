@@ -4,7 +4,7 @@ import Sharing
 import SupacodeSettingsShared
 
 /// Live state of one Markdown editor tab: the document, the Prompt Edit
-/// status, the read/edit mode, and the AppKit plumbing (focus, ⌘S, ⌘/) around
+/// status, the read/edit mode, and the AppKit plumbing (focus, ⌘S, ⌘/, ⌘F) around
 /// the engine's text view.
 @MainActor
 @Observable
@@ -138,48 +138,71 @@ final class MarkdownEditorModel: PromptEditHost {
     keyMonitor = nil
   }
 
-  /// Editor-scoped shortcuts, active only while this editor has focus.
+  /// Editor-scoped shortcuts, active only while this editor has focus. Find
+  /// chords are caught here because the app menu binds ⌘F to terminal search.
   @MainActor private enum Shortcut {
     case save
     case toggleReadMode
+    case find(NSTextFinder.Action)
 
     init?(_ event: NSEvent, overrides: [AppShortcutID: AppShortcutOverride]) {
       let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-      if event.charactersIgnoringModifiers == "s", modifiers == .command {
-        self = .save
-        return
-      }
-      if overrides[.toggleMarkdownReadMode] != nil {
-        guard AppShortcuts.toggleMarkdownReadMode.effective(from: overrides)?.matches(event) == true
-        else { return nil }
+      switch (event.charactersIgnoringModifiers?.lowercased(), modifiers) {
+      case ("s", .command): self = .save
+      case ("f", .command): self = .find(.showFindInterface)
+      case ("f", [.command, .option]): self = .find(.showReplaceInterface)
+      case ("g", .command): self = .find(.nextMatch)
+      case ("g", [.command, .shift]): self = .find(.previousMatch)
+      case ("e", .command): self = .find(.setSearchString)
+      default:
+        guard Self.isReadModeToggle(event, modifiers: modifiers, overrides: overrides) else { return nil }
         self = .toggleReadMode
-        return
+      }
+    }
+
+    private static func isReadModeToggle(
+      _ event: NSEvent,
+      modifiers: NSEvent.ModifierFlags,
+      overrides: [AppShortcutID: AppShortcutOverride]
+    ) -> Bool {
+      if overrides[.toggleMarkdownReadMode] != nil {
+        return AppShortcuts.toggleMarkdownReadMode.effective(from: overrides)?.matches(event) == true
       }
       // The default matches by character, not key code: `matches` would resolve "/" to the
       // unshifted 7 key on German (⌘7, Select Tab 7), whereas the typed chord is ⌘⇧7.
-      guard event.charactersIgnoringModifiers == "/", modifiers.subtracting(.shift) == .command else {
-        return nil
-      }
-      self = .toggleReadMode
+      return event.charactersIgnoringModifiers == "/" && modifiers.subtracting(.shift) == .command
     }
   }
 
   private func perform(_ shortcut: Shortcut) -> Bool {
-    guard let textView, textView.window?.isKeyWindow == true, textView.window?.firstResponder === textView else {
-      return false
-    }
+    guard let textView, let window = textView.window, window.isKeyWindow else { return false }
+    let responder = window.firstResponder
     switch shortcut {
     case .save:
+      guard responder === textView else { return false }
       Self.logger.info("[USER] Saved \(relativePath) with ⌘S")
       document.save()
     case .toggleReadMode:
+      guard responder === textView else { return false }
       toggleReadMode()
+    case .find(let action):
+      // The find bar's field editor counts as focus too, so ⌘G works from it.
+      guard let scrollView = textView.enclosingScrollView,
+        let responderView = responder as? NSView, responderView.isDescendant(of: scrollView)
+      else { return false }
+      Self.logger.info("[USER] Find action \(action.rawValue) in \(relativePath)")
+      textView.usesFindBar = true
+      textView.isIncrementalSearchingEnabled = true
+      let sender = NSMenuItem()
+      sender.tag = action.rawValue
+      textView.performTextFinderAction(sender)
     }
     return true
   }
 
   private static func firstTextView(in view: NSView) -> NSTextView? {
-    if let textView = view as? NSTextView { return textView }
+    // Skip the find bar's field editor, which lives in the same scroll view.
+    if let textView = view as? NSTextView, !textView.isFieldEditor { return textView }
     for subview in view.subviews {
       if let found = firstTextView(in: subview) { return found }
     }

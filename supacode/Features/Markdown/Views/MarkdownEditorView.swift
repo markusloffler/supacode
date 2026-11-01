@@ -78,7 +78,7 @@ struct MarkdownEditorView: View {
         )
         // Some settings (the reading column) only apply when the view is built.
         .id(themeChoice)
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .bottomTrailing) {
           MarkdownModeToggle(model: model)
         }
       }
