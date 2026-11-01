@@ -21,9 +21,38 @@ enum MarkdownOpenRouter {
   }
 
   // MARK: Code editor
-  /// Markdown, or any other text file the code editor takes (sniffed by content).
+  /// Which Supacode view opens a file.
+  enum EditorKind: Equatable {
+    case markdown
+    /// Text, sniffed by content.
+    case code
+    /// Everything else (images, PDFs, archives, packages) as a Quick Look preview.
+    case quickLook
+  }
+
+  /// The view `url` opens in; nil for a plain directory or a missing file.
+  static func editorKind(for url: URL) -> EditorKind? {
+    if isMarkdown(url) { return .markdown }
+    if TextFileSniffer.isEditableText(url) { return .code }
+    guard
+      let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isPackageKey]),
+      values.isRegularFile == true || values.isPackage == true
+    else { return nil }
+    return .quickLook
+  }
+
+  /// Any file Supacode can show: Markdown, text, or a Quick Look preview.
   static func opensInEditor(_ url: URL) -> Bool {
-    isMarkdown(url) || TextFileSniffer.isEditableText(url)
+    editorKind(for: url) != nil
+  }
+
+  /// The tab icon for a file opening in Supacode.
+  static func tabIcon(for url: URL) -> String {
+    switch editorKind(for: url) {
+    case .markdown: "doc.text"
+    case .quickLook: "eye"
+    case .code, nil: "chevron.left.forwardslash.chevron.right"
+    }
   }
 
   /// `fileURL`'s path relative to `root`; nil when it lies outside.

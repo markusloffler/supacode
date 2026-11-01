@@ -21,13 +21,20 @@ struct MarkdownContentBuilder {
     }
     let worktreeID = request.worktreeID
     let targets = promptEditTargets
+    let fileURL = state.fileURL(in: root)
     // MARK: Code editor
-    guard MarkdownOpenRouter.isMarkdown(URL(filePath: state.relativePath)) else {
+    // A missing file falls back to the code editor, which shows the load error.
+    switch MarkdownOpenRouter.editorKind(for: fileURL) ?? .code {
+    case .markdown:
+      break
+    case .quickLook:
+      return QuickLookContent(id: request.contentID, state: state, fileURL: fileURL)
+    case .code:
       let model = CodeEditorModel(
         contentID: request.contentID,
         worktreeID: worktreeID,
         relativePath: state.relativePath,
-        fileURL: state.fileURL(in: root),
+        fileURL: fileURL,
         promptEditTargets: { targets(worktreeID) },
         send: send
       )
@@ -37,7 +44,7 @@ struct MarkdownContentBuilder {
       contentID: request.contentID,
       worktreeID: worktreeID,
       relativePath: state.relativePath,
-      fileURL: state.fileURL(in: root),
+      fileURL: fileURL,
       promptEditTargets: { targets(worktreeID) },
       send: send
     )

@@ -108,7 +108,7 @@ struct MarkdownAppReducer: Reducer {
     let spec = NewTabSpec(
       title: content.fileName,
       // MARK: Code editor
-      icon: MarkdownOpenRouter.isMarkdown(fileURL) ? "doc.text" : "chevron.left.forwardslash.chevron.right",
+      icon: MarkdownOpenRouter.tabIcon(for: fileURL),
       content: .markdown(content),
       geometry: contentRuntime.spawnGeometry(near: focusedContentID)
     )

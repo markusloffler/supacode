@@ -15,16 +15,17 @@
 >   pane, monospaced with highlight.js syntax colouring, a find/replace bar (⌘F, ⌥⌘F) and a soft
 >   wrap toggle. Autosave, reload on external changes and *Prompt Edit…* work like in the Markdown
 >   editor.
+> - **Quick Look preview**: every other file (images, PDFs, archives, larger text files, packages)
+>   opens as a read-only Quick Look tab in the same editor pane and refreshes when it changes on disk.
 > - **Open paths from the terminal**: right-click a filename or path in the terminal to open it in
 >   the default editor, *Open With*, the Markdown editor, locate it in the File Inspector, or
 >   reveal it in Finder. Relative names are resolved against the cwd and the worktree, falling
 >   back to a search of the worktree's git files.
->   Optionally (Settings → Terminal), double-clicking a Markdown or text file name opens it in the
->   Supacode editor. Use Shift+double-click in apps that capture the mouse.
+>   Optionally (Settings → Terminal), double-clicking a file name opens it in the Supacode editor
+>   (or Quick Look preview). Use Shift+double-click in apps that capture the mouse.
 > - **Open File (⌘⇧O)**: VS Code-style fuzzy search over the selected worktree's files (git's
 >   tracked and untracked-but-not-ignored files). Return opens Markdown and text files in the Supacode
->   editor and anything else in the repository's editor; VS Code-family editors open it in the window for the
->   project root. *Open Repository or Folder* loses its ⌘⇧O default (rebind it in Settings).
+>   editor and anything else in a Quick Look preview. *Open Repository or Folder* loses its ⌘⇧O default (rebind it in Settings).
 > - **Terminal context menu while the mouse is captured**: Shift+right-click shows the context menu
 >   even when a TUI captures the mouse.
 > - **Sidebar workspaces**: file repositories under numbered workspaces and filter the sidebar

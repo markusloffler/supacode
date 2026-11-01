@@ -579,7 +579,7 @@ private struct CommandPaletteRowView: View {
       base =
         MarkdownOpenRouter.isMarkdown(url)
         ? "Open in the Supacode Markdown editor"
-        : "Open text files in the Supacode editor, others in the project's editor"
+        : "Open text files in the Supacode editor, others in a Quick Look preview"
     #if DEBUG
       case .debugTestToast:
         base = row.title
