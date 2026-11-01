@@ -21,4 +21,6 @@ enum TerminalPathOpenRequest: Equatable {
   case open(URL, with: OpenWorktreeAction)
   case markdownEditor(URL)
   case revealInFileExplorer(URL)
+  /// Reveals the file in the File Inspector and starts its inline rename.
+  case renameInFileExplorer(URL)
 }

@@ -11,11 +11,18 @@ final class DiffSwitchingContent: TabContent {
   let diffModel: DiffViewerModel
   private let diffToolbar: EditorDiffToolbar
   private let onClick: () -> Void
+  let fileMenu: TabFileMenu?
   private var container: DiffSwitchHostingView?
 
-  init(inner: any TabContent, diffModel: DiffViewerModel, onClick: @escaping () -> Void) {
+  init(
+    inner: any TabContent,
+    diffModel: DiffViewerModel,
+    fileMenu: TabFileMenu? = nil,
+    onClick: @escaping () -> Void
+  ) {
     self.inner = inner
     self.diffModel = diffModel
+    self.fileMenu = fileMenu
     self.onClick = onClick
     self.diffToolbar = EditorDiffToolbar(model: diffModel)
   }

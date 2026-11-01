@@ -1,5 +1,6 @@
 import AppKit
 import ComposableArchitecture
+import QuickLook
 import SupacodeSettingsShared
 import SwiftUI
 import UniformTypeIdentifiers
@@ -367,6 +368,7 @@ private struct PaneTabView: View {
   @State private var cancelOnExit = false
   @State private var trailingButtonGestureActive = false
   @State private var isDropTargeted = false
+  @State private var quickLookURL: URL?
   @FocusState private var isFieldFocused: Bool
   @Environment(CommandKeyObserver.self) private var commandKeyObserver
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -562,6 +564,7 @@ private struct PaneTabView: View {
       isDropTargeted = $0 && PaneTabDrag.canDrop(sourceTabID: dragModel.sourceTabID, in: store.layout)
     }
     .contextMenu { contextMenuItems }
+    .quickLookPreview($quickLookURL)
   }
 
   private var displayTitle: String {
@@ -660,6 +663,10 @@ private struct PaneTabView: View {
 
   @ViewBuilder
   private var contextMenuItems: some View {
+    if let fileMenu = runtime.content(for: tab.content.id)?.fileMenu {
+      PaneTabFileMenuItems(fileMenu: fileMenu) { quickLookURL = fileMenu.fileURL }
+      Divider()
+    }
     if !tab.isLocked {
       Button("Rename Tab") { beginRename() }
       Divider()
@@ -687,6 +694,44 @@ private struct PaneTabView: View {
   private func beginRename() {
     guard !tab.isLocked else { return }
     store.send(.beginTabRename(id: tab.id))
+  }
+}
+
+/// A file tab's right-click items, mirroring the File Inspector's row menu.
+private struct PaneTabFileMenuItems: View {
+  let fileMenu: TabFileMenu
+  let quickLook: () -> Void
+
+  var body: some View {
+    // Read on build so the editor list tracks installs and repository settings.
+    let context = fileMenu.context()
+    Button("Open", systemImage: "arrow.up.right.square", action: fileMenu.openInDefaultApp)
+    if let primary = context?.primaryAction {
+      Button("Open with \(primary.labelTitle)") { fileMenu.open(with: primary) }
+    }
+    if let context, !context.fileOpenActions.isEmpty {
+      Menu("Open With") {
+        ForEach(context.fileOpenActions, id: \.self) { action in
+          Button {
+            fileMenu.open(with: action)
+          } label: {
+            if let icon = context.icon(action) {
+              Label { Text(action.labelTitle) } icon: { Image(nsImage: icon) }
+            } else {
+              Text(action.labelTitle)
+            }
+          }
+        }
+      }
+    }
+    Button("Quick Look", systemImage: "eye", action: quickLook)
+    Divider()
+    Button("Reveal in Finder", systemImage: "folder", action: fileMenu.revealInFinder)
+    Button("Rename File", systemImage: "pencil", action: fileMenu.rename)
+    Divider()
+    Button("Copy", systemImage: "document.on.document.fill", action: fileMenu.copyFile)
+    Button("Copy as Pathname", systemImage: "doc.on.doc", action: fileMenu.copyPathname)
+    Button("Copy Relative Path", action: fileMenu.copyRelativePath)
   }
 }
 

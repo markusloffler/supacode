@@ -13,6 +13,10 @@ struct MarkdownContentBuilder {
   var promptEditTargets: (Worktree.ID) -> [PromptEditTarget]
   /// Routes editor intents into `AppFeature`.
   var send: (MarkdownAction) -> Void
+  /// Installed editors for the tab's file menu; nil hides the editor items.
+  var pathMenuContext: (Worktree.ID) -> TerminalPathMenuContext? = { _ in nil }
+  /// Routes the tab file menu's opens and rename to the app store.
+  var openPath: (TerminalPathOpenRequest, Worktree.ID) -> Void = { _, _ in }
 
   func make(_ request: ContentRequest, state: MarkdownContentState) -> any TabContent {
     guard let root = worktreeRoot(request.worktreeID) else {
@@ -32,9 +36,18 @@ struct MarkdownContentBuilder {
       promptEditTargets: { targets(worktreeID) },
       send: send
     )
+    let menuContext = pathMenuContext
+    let openPath = openPath
+    let fileMenu = TabFileMenu(
+      fileURL: state.fileURL(in: root),
+      relativePath: state.relativePath,
+      context: { menuContext(worktreeID) },
+      perform: { openPath($0, worktreeID) }
+    )
     return DiffSwitchingContent(
       inner: makeEditor(request, state: state, root: root),
       diffModel: diffModel,
+      fileMenu: fileMenu,
       onClick: { send(.editorFocused(request.contentID, worktreeID: worktreeID)) }
     )
   }
@@ -89,6 +102,12 @@ extension MarkdownContentBuilder {
       },
       send: { [weak terminalManager] action in
         terminalManager?.appStore?.send(.markdown(action))
+      },
+      pathMenuContext: { [weak terminalManager] id in
+        terminalManager?.pathMenuContext(for: id)
+      },
+      openPath: { [weak terminalManager] request, id in
+        terminalManager?.openTerminalPath(request, worktreeID: id)
       }
     )
   }

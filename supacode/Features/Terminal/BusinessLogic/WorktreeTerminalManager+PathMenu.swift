@@ -44,6 +44,12 @@ extension WorktreeTerminalManager {
       appStore.send(.repositories(.revealInFileExplorer(worktreeID: worktreeID, url: url, presentInspector: false)))
     case .revealInFileExplorer(let url):
       appStore.send(.repositories(.revealInFileExplorer(worktreeID: worktreeID, url: url, presentInspector: true)))
+    case .renameInFileExplorer(let url):
+      appStore.send(
+        .repositories(
+          .revealInFileExplorer(worktreeID: worktreeID, url: url, presentInspector: true, startRename: true)
+        )
+      )
     }
   }
 }

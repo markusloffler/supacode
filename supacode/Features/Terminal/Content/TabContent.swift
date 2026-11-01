@@ -28,6 +28,9 @@ protocol TabContent: AnyObject {
   /// Live, observable toolbar docked at the top of the content region; nil
   /// docks nothing.
   var toolbar: (any TabContentToolbar)? { get }
+  /// The file an editor or viewer tab shows, for the tab's file menu items;
+  /// nil for content not backed by a file.
+  var fileMenu: TabFileMenu? { get }
   /// The current persistable state, including restoration data.
   func snapshot() -> ContentSnapshot
 }
@@ -44,6 +47,8 @@ extension TabContent {
   var chrome: (any TabChrome)? { nil }
   // A docked toolbar is opt-in per content kind.
   var toolbar: (any TabContentToolbar)? { nil }
+  // Only file-backed content has file menu items.
+  var fileMenu: TabFileMenu? { nil }
 }
 
 /// Where in the layout a content is being created; a runtime hint for the

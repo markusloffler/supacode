@@ -622,7 +622,7 @@ struct RepositoriesFeature {
     case setInspectorPresented(Bool)
     /// Select `url` in the Files pane; ignored unless `worktreeID` is selected. With
     /// `presentInspector` false it only acts when the Files pane is already showing.
-    case revealInFileExplorer(worktreeID: Worktree.ID, url: URL, presentInspector: Bool)
+    case revealInFileExplorer(worktreeID: Worktree.ID, url: URL, presentInspector: Bool, startRename: Bool = false)
     case fileExplorer(FileExplorerFeature.Action)
     case delayedPullRequestRefresh(Worktree.ID)
     case openRepositorySettings(Repository.ID)
@@ -3568,7 +3568,7 @@ struct RepositoriesFeature {
         state.inspectorPresented = presented
         return .none
 
-      case .revealInFileExplorer(let worktreeID, let url, let presentInspector):
+      case .revealInFileExplorer(let worktreeID, let url, let presentInspector, let startRename):
         guard worktreeID == state.selectedWorktreeID,
           let root = state.worktree(for: worktreeID).flatMap({ FileExplorerFeature.Context(worktree: $0).root })
         else {
@@ -3581,7 +3581,9 @@ struct RepositoriesFeature {
         } else if !state.inspectorPresented || state.inspectorPane != .files {
           return .none
         }
-        return .send(.fileExplorer(.revealRequested(worktreeID: worktreeID, root: root, url: url)))
+        return .send(
+          .fileExplorer(.revealRequested(worktreeID: worktreeID, root: root, url: url, startRename: startRename))
+        )
 
       // Only scheduled after an explicit PR action, to catch the settled state
       // once GitHub reflects the mutation, so it refreshes as a manual trigger.

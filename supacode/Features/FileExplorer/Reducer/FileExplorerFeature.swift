@@ -174,7 +174,7 @@ struct FileExplorerFeature {
     case rowSelected(String?)
     /// Expand the ancestors of `url` and select it, e.g. from a terminal right-click.
     /// Carries the worktree and root so it lands even before the pane is shown.
-    case revealRequested(worktreeID: Worktree.ID, root: URL, url: URL)
+    case revealRequested(worktreeID: Worktree.ID, root: URL, url: URL, startRename: Bool = false)
     case applicationBecameActive
     case listingLoaded(
       worktreeID: Worktree.ID,
@@ -286,8 +286,8 @@ struct FileExplorerFeature {
         state.trees[id]?.selectedPath = path
         return .none
 
-      case .revealRequested(let worktreeID, let root, let url):
-        return handleRevealRequested(&state, worktreeID: worktreeID, root: root, url: url)
+      case .revealRequested(let worktreeID, let root, let url, let startRename):
+        return handleRevealRequested(&state, worktreeID: worktreeID, root: root, url: url, startRename: startRename)
 
       case .listingLoaded(let worktreeID, let root, let directory, let limit, let result):
         // Keyed by the worktree the effect was issued for, so a listing that
@@ -460,7 +460,8 @@ struct FileExplorerFeature {
     _ state: inout State,
     worktreeID: Worktree.ID,
     root: URL,
-    url: URL
+    url: URL,
+    startRename: Bool
   ) -> Effect<Action> {
     guard let path = Self.relativePath(of: url, under: root), path != TreeState.rootPath else {
       Self.logger.debug("revealRequested: \(url.path) is outside \(root.path), ignoring.")
@@ -487,6 +488,7 @@ struct FileExplorerFeature {
       }
     }
     tree.selectedPath = path
+    if startRename { tree.pendingRename = path }
     state.trees[worktreeID] = tree
     Self.logger.debug("revealRequested: \(path), \(effects.count) listing(s) issued.")
     return .merge(effects)
