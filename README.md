@@ -17,6 +17,12 @@
 >   editor.
 > - **Quick Look preview**: every other file (images, PDFs, archives, larger text files, packages)
 >   opens as a read-only Quick Look tab in the same editor pane and refreshes when it changes on disk.
+> - **Diff viewer**: every editor and viewer tab has a *Changes* toggle in its top bar that swaps the
+>   file for its uncommitted changes against HEAD (side by side or unified, syntax coloured, previous /
+>   next change). The mode is app-wide, so files opened afterwards show their diff too. *Show Changes*
+>   in the inspector's context menu turns it on and opens the file.
+>   Selections span lines and offer *Prompt Edit* like the editors: the agent gets the current line
+>   range, removed lines quoted, and a pointer to `git diff HEAD -- <file>`.
 > - **Open paths from the terminal**: right-click a filename or path in the terminal to open it in
 >   the default editor, *Open With*, the Markdown editor, locate it in the File Inspector, or
 >   reveal it in Finder. Relative names are resolved against the cwd and the worktree, falling

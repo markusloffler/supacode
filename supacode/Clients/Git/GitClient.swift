@@ -26,6 +26,7 @@ enum GitOperation: String {
   case stageFile = "stage_file"
   case unstageFile = "unstage_file"
   case discardFile = "discard_file"
+  case headFileContents = "head_file_contents"
   case branchDelete = "branch_delete"
   case branchRename = "branch_rename"
   case lineChanges = "line_changes"
@@ -1241,6 +1242,24 @@ struct GitClient {
       arguments: [
         "--literal-pathspecs", "-C", path, "restore", "--source=HEAD", "--staged", "--worktree", "--", relativePath,
       ],
+      localePinned: true
+    )
+  }
+
+  /// A file's committed bytes at HEAD; nil when HEAD lacks it (new file,
+  /// unborn branch). `./` keeps the path relative to the worktree root.
+  nonisolated func headFileContents(_ relativePath: String, in worktreeURL: URL) async throws -> Data? {
+    let path = worktreeURL.path(percentEncoded: false)
+    let objectSpec = "HEAD:./\(relativePath)"
+    let objectType = try? await runGit(
+      operation: .headFileContents,
+      arguments: ["-C", path, "--no-optional-locks", "cat-file", "-t", objectSpec],
+      localePinned: true
+    ).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard objectType == "blob" else { return nil }
+    return try await runGitData(
+      operation: .headFileContents,
+      arguments: ["-C", path, "--no-optional-locks", "cat-file", "blob", objectSpec],
       localePinned: true
     )
   }

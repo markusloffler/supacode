@@ -17,6 +17,17 @@ struct PromptEditSelection: Equatable, Sendable {
   /// Set only when the selection starts or ends mid-line, where the line range
   /// alone would overstate the block.
   var boundary: Boundary?
+  // MARK: Diff viewer
+  /// Set for a selection made in a diff.
+  var diff: DiffContext?
+
+  /// What a diff selection adds to the plain line range.
+  struct DiffContext: Equatable, Sendable {
+    /// The selected lines removed since HEAD, quoted; nil when none were selected.
+    var removed: Boundary?
+    /// Only removed lines were selected: `lines` is just where they were.
+    var removedOnly: Bool
+  }
 }
 
 /// Builds the single-line instruction a coding agent receives. Plain language
@@ -62,28 +73,62 @@ enum PromptEditPayload {
     return .span(start: leadingWords(words), end: trailingWords(words))
   }
 
-  /// `Edit the file docs/foo.md in place, lines 12-18 (from "…" to "…").
-  /// Make the following change to this block: Make this shorter.`
-  /// The edit wording is explicit: a bare "In <file>: translate" reads as a
-  /// question, and agents answer it in the terminal instead of editing.
+  /// `Apply the following prompt to the file docs/foo.md, lines 12-18 (from "…"
+  /// to "…"). Prompt: "Make this shorter". (If the prompt asks for a change, always
+  /// edit the file in place.)` Generic, so questions get answers; the closing
+  /// note keeps agents from answering an edit request in the terminal instead.
   static func format(_ selection: PromptEditSelection, instruction: String) -> String {
     let path =
       selection.relativePath.contains(where: \.isWhitespace)
       ? "`\(selection.relativePath)`" : selection.relativePath
+    let request = instruction.split(whereSeparator: \.isNewline).joined(separator: " ")
+      .trimmingCharacters(in: .whitespaces)
+    if let diff = selection.diff {
+      return formatDiff(selection, diff: diff, path: path, request: request)
+    }
+    return "Apply the following prompt to the file \(path), \(location(of: selection)). \(prompt(request))"
+  }
+
+  /// The instruction quoted (its own quotes neutralized), so it reads as one unit.
+  private static func prompt(_ request: String) -> String {
+    let quoted = request.replacing("\"", with: "'")
+    return "Prompt: \"\(quoted)\". (If the prompt asks for a change, always edit the file in place.)"
+  }
+
+  /// `line 12` / `lines 12-18`, plus the quoted boundary of a mid-line selection.
+  private static func location(of selection: PromptEditSelection) -> String {
     let lines =
       selection.lines.count == 1
       ? "line \(selection.lines.lowerBound)"
       : "lines \(selection.lines.lowerBound)-\(selection.lines.upperBound)"
-    let location =
-      switch selection.boundary {
-      case nil: lines
-      case .whole(let text): "\(lines) (\"\(text)\")"
-      case .span(let start, let end): "\(lines) (from \"\(start)\" to \"\(end)\")"
-      }
-    let request = instruction.split(whereSeparator: \.isNewline).joined(separator: " ")
-      .trimmingCharacters(in: .whitespaces)
-    let sentence = request.last.map { ".!?".contains($0) } == true ? request : request + "."
-    return "Edit the file \(path) in place, \(location). Make the following change to this block: \(sentence)"
+    return selection.boundary.map { "\(lines) (\(quote($0)))" } ?? lines
+  }
+
+  private static func quote(_ boundary: PromptEditSelection.Boundary) -> String {
+    switch boundary {
+    case .whole(let text): "\"\(text)\""
+    case .span(let start, let end): "from \"\(start)\" to \"\(end)\""
+    }
+  }
+
+  // MARK: Diff viewer
+  /// A diff selection points the agent at the uncommitted change; removed lines
+  /// no longer exist in the file, so they are quoted and anchored at their spot.
+  private static func formatDiff(
+    _ selection: PromptEditSelection,
+    diff: PromptEditSelection.DiffContext,
+    path: String,
+    request: String
+  ) -> String {
+    let gitDiff = "see `git diff HEAD -- \(selection.relativePath)`"
+    let removed = diff.removed.map(quote)
+    if diff.removedOnly {
+      return "Apply the following prompt to the file \(path) near line \(selection.lines.lowerBound), where"
+        + " uncommitted changes removed these lines: \(removed ?? "\"\"") (\(gitDiff)). \(prompt(request))"
+    }
+    let replaced = removed.map { "; this block replaced these removed lines: \($0)" } ?? ""
+    return "Apply the following prompt to the file \(path), \(location(of: selection)). The file has uncommitted"
+      + " changes (\(gitDiff))\(replaced). \(prompt(request))"
   }
 
   private static func startsAtLineStart(_ text: NSString, range: NSRange) -> Bool {

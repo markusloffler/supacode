@@ -129,7 +129,7 @@ The layout layer is already content-agnostic (`TabContent` protocol, `ContentRun
 One line, sent as bracketed paste followed by Enter (explicit edit wording: a bare "In <file>: …" made agents answer in the terminal instead of editing):
 
 ```text
-Edit the file docs/foo.md in place, lines 12-18 (from "first words…" to "…last words"). Make the following change to this block: Make this shorter.
+Apply the following prompt to the file docs/foo.md, lines 12-18 (from "first words…" to "…last words"). Prompt: "Make this shorter". (If the prompt asks for a change, always edit the file in place.)
 ```
 
 - Path relative to the worktree.

@@ -9,7 +9,7 @@ import SwiftUI
 final class PromptEditController {
   private static let logger = SupaLogger("PromptEdit")
 
-  weak var host: (any PromptEditHost)?
+  weak var host: (any PromptEditSource)?
   private let panel = SelectionPanelController()
 
   nonisolated init() {}
@@ -54,7 +54,7 @@ final class PromptEditController {
 
   private func panelContent(range: NSRange) -> SelectionPanelContent? {
     guard let host, let textView = host.textView else { return nil }
-    let selection = PromptEditPayload.selection(in: host.document.text, range: range, relativePath: host.relativePath)
+    let selection = host.promptEditSelection(for: range)
     let view = SelectionPanelView(
       selection: selection,
       targets: host.promptEditTargets(),
@@ -91,9 +91,9 @@ final class PromptEditController {
   ) {
     panel.dismissAndRefocus()
     guard let host else { return }
-    // The agent must read what the user sees.
-    host.document.save()
-    let lines = "\(selection.lines.lowerBound)-\(selection.lines.upperBound)"
+    host.prepareForPromptEdit()
+    let diffNote = selection.diff == nil ? "" : " (diff)"
+    let lines = "\(selection.lines.lowerBound)-\(selection.lines.upperBound)\(diffNote)"
     let request = PromptEditRequest(
       id: UUID(),
       worktreeID: host.worktreeID,

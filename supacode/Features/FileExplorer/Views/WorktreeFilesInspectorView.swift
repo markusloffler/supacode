@@ -203,7 +203,8 @@ private struct FileExplorerTreeContent: View {
             rename: { store.send(.renameRequested(path: $0, newName: $1)) },
             createItem: { store.send(.createItemRequested(directory: $0, isDirectory: $1)) },
             consumePendingRename: { store.send(.pendingRenameConsumed) },
-            openInMarkdownEditor: openInMarkdownEditor?.open
+            openInMarkdownEditor: openInMarkdownEditor?.open,
+            openDiff: openInMarkdownEditor?.openDiff
           ),
           chromeTextSize: settingsFile.global.chromeTextSize,
           bottomBarInset: bottomBarInset

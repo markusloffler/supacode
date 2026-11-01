@@ -123,7 +123,13 @@ struct WorktreeDetailView: View {
         onActivateFile: { store.send(.openFileFromExplorer($0)) }
       )
       // MARK: Markdown editor
-      .environment(\.openInMarkdownEditor, MarkdownEditorOpener { store.send(.markdown(.openInEditor($0))) })
+      .environment(
+        \.openInMarkdownEditor,
+        MarkdownEditorOpener(
+          open: { store.send(.markdown(.openInEditor($0))) },
+          openDiff: { store.send(.markdown(.openDiff($0))) }
+        )
+      )
       .inspectorColumnWidth(min: 160, ideal: 320, max: 480)
       // Match the inspector's accent to the terminal background.
       .tint(terminalManager.chromeOverlayTint())

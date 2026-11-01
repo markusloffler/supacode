@@ -30,6 +30,9 @@ struct FileExplorerOutlineActions {
   // MARK: Markdown editor
   /// Opens a Markdown file in the built-in editor; nil hides the entry.
   var openInMarkdownEditor: ((URL) -> Void)?
+  // MARK: Diff viewer
+  /// Opens a changed file's diff against HEAD; nil hides the entry.
+  var openDiff: ((URL) -> Void)?
 }
 
 /// NSOutlineView-backed tree. AppKit owns selection, disclosure, keyboard,
@@ -938,6 +941,13 @@ extension FileExplorerOutlineView.Coordinator: NSMenuDelegate {
     return true
   }
 
+  // MARK: Diff viewer
+  @objc fileprivate func contextMenuShowChanges(_ sender: NSMenuItem) {
+    guard let path = sender.representedObject as? String, let url = url(for: path) else { return }
+    Self.logger.info("[USER] Chose Show Changes for \(path) in the file inspector.")
+    actions?.openDiff?(url)
+  }
+
   fileprivate func addMarkdownEditorItem(to menu: NSMenu, path: String) {
     guard let url = url(for: path), actions?.openInMarkdownEditor != nil, MarkdownOpenRouter.opensInEditor(url) else {
       return
@@ -1126,6 +1136,15 @@ extension FileExplorerOutlineView.Coordinator: NSMenuDelegate {
   /// brand-new file has nothing to revert, so it is deleted via Move to Trash.
   private func addGitMenuItems(to menu: NSMenu, path: String) {
     guard let status = tree?.gitStatus.statuses[path], !status.isConflicted else { return }
+    // MARK: Diff viewer
+    if entryItems[path]?.entry?.isDirectory == false, actions?.openDiff != nil {
+      menu.addItem(
+        makeItem(
+          "Show Changes", action: #selector(contextMenuShowChanges(_:)), symbolName: "plus.forwardslash.minus",
+          representing: path
+        )
+      )
+    }
     if status.hasUnstagedChange {
       menu.addItem(
         makeItem(

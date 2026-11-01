@@ -75,13 +75,17 @@ struct SelectionPanelView: View {
     .onExitCommand(perform: onCancel)
     .onAppear {
       targetID = targets.first?.id
-      isFieldFocused = showsPrompt
+      // The view appears while the panel window is still being built (sizing),
+      // before it is shown and made key; focus set then is dropped.
+      DispatchQueue.main.async {
+        isFieldFocused = showsPrompt
+      }
     }
   }
 
   @ViewBuilder private var promptSection: some View {
     // Return sends, ⌥Return breaks the line.
-    TextField("Ask an agent to edit the selection…", text: $instruction, axis: .vertical)
+    TextField("Ask an agent about the selection, or to edit it…", text: $instruction, axis: .vertical)
       .lineLimit(2...8)
       .textFieldStyle(.plain)
       .padding(8)
@@ -132,7 +136,11 @@ struct SelectionPanelView: View {
   }
 
   private static func locationLabel(of selection: PromptEditSelection) -> String {
-    selection.lines.count == 1
+    // MARK: Diff viewer
+    if selection.diff?.removedOnly == true {
+      return "Removed, near line \(selection.lines.lowerBound)"
+    }
+    return selection.lines.count == 1
       ? "Line \(selection.lines.lowerBound)"
       : "Lines \(selection.lines.lowerBound)–\(selection.lines.upperBound)"
   }

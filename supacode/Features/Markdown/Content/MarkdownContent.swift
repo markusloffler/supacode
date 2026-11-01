@@ -51,7 +51,7 @@ final class MarkdownContent: TabContent {
 
   /// Focuses the editor of a live Markdown or code editor content, if `id` is one.
   static func focusEditor(_ id: ContentID, runtime: ContentRuntime) {
-    switch runtime.content(for: id) {
+    switch DiffSwitchingContent.unwrapped(runtime.content(for: id)) {
     case let markdown as MarkdownContent: markdown.model.focusEditor()
     case let code as CodeEditorContent: code.model.focusEditor()
     default: break
@@ -60,7 +60,11 @@ final class MarkdownContent: TabContent {
 
   /// Publishes a Prompt Edit status to the editor that sent it.
   static func setPromptEditStatus(_ status: PromptEditStatus?, for id: ContentID, runtime: ContentRuntime) {
-    switch runtime.content(for: id) {
+    let content = runtime.content(for: id)
+    // MARK: Diff viewer
+    // Editor and diff share the content id; both show the tab's latest edit.
+    (content as? DiffSwitchingContent)?.diffModel.promptEditStatus = status
+    switch DiffSwitchingContent.unwrapped(content) {
     case let markdown as MarkdownContent: markdown.model.promptEditStatus = status
     case let code as CodeEditorContent: code.model.promptEditStatus = status
     default: break

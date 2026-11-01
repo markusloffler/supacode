@@ -9,6 +9,9 @@ enum MarkdownAction: Equatable {
   /// Open a file in the worktree's editor pane (explorer double-click, or the
   /// explicit "Open in Supacode Editor" menu entry).
   case openInEditor(URL)
+  // MARK: Diff viewer
+  /// Turn on diff mode and open the file, showing its uncommitted changes.
+  case openDiff(URL)
   case promptEditSubmitted(PromptEditRequest)
   case promptEditCancelled(UUID)
   /// The editor took input focus; pane focus follows it, like a terminal.
@@ -49,11 +52,15 @@ struct MarkdownAppReducer: Reducer {
   @Dependency(TerminalClient.self) private var terminalClient
   @Dependency(\.continuousClock) private var clock
   @Dependency(\.uuid) private var uuid
+  @Shared(.editorDiffMode) private var editorDiffMode
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
       case .markdown(.openInEditor(let fileURL)):
+        return openInEditor(fileURL, state: &state)
+      case .markdown(.openDiff(let fileURL)):
+        $editorDiffMode.withLock { $0 = true }
         return openInEditor(fileURL, state: &state)
       case .markdown(.promptEditSubmitted(let request)):
         return submit(request, state: &state)

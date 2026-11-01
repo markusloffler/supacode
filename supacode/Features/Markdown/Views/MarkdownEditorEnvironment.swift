@@ -4,6 +4,9 @@ import SwiftUI
 /// captures the stable app store, so a new instance never needs to invalidate.
 struct MarkdownEditorOpener: Equatable {
   let open: (URL) -> Void
+  // MARK: Diff viewer
+  /// Opens the file's uncommitted changes as a diff.
+  let openDiff: (URL) -> Void
 
   static func == (lhs: Self, rhs: Self) -> Bool { true }
 }

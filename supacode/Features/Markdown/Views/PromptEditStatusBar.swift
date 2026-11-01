@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The editor's latest Prompt Edit: queued (cancellable), sent, or failed.
 struct PromptEditStatusBar: View {
-  let model: any PromptEditHost
+  let model: any PromptEditSource
 
   var body: some View {
     Group {

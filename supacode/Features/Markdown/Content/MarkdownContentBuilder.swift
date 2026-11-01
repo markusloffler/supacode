@@ -19,6 +19,27 @@ struct MarkdownContentBuilder {
       Self.logger.error("No local worktree \(request.worktreeID.rawValue) for editor \(request.contentID.rawValue)")
       return InertTabContent(id: request.contentID, state: request.content)
     }
+    // MARK: Diff viewer
+    // Every editor and viewer can flip to the file's diff.
+    let send = send
+    let worktreeID = request.worktreeID
+    let targets = promptEditTargets
+    let diffModel = DiffViewerModel(
+      contentID: request.contentID,
+      worktreeID: worktreeID,
+      relativePath: state.relativePath,
+      worktreeRoot: root,
+      promptEditTargets: { targets(worktreeID) },
+      send: send
+    )
+    return DiffSwitchingContent(
+      inner: makeEditor(request, state: state, root: root),
+      diffModel: diffModel,
+      onClick: { send(.editorFocused(request.contentID, worktreeID: worktreeID)) }
+    )
+  }
+
+  private func makeEditor(_ request: ContentRequest, state: MarkdownContentState, root: URL) -> any TabContent {
     let worktreeID = request.worktreeID
     let targets = promptEditTargets
     let fileURL = state.fileURL(in: root)

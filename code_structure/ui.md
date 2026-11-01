@@ -68,7 +68,7 @@ The largest single view file; renders one of several bodies depending on state (
 It also owns:
 
 - The **toolbar** (`WorktreeDetailToolbar` / `WorktreeToolbarContent`): branch/folder title, "Open With" menu, script-run menu, and trailing files/git/notifications toggle buttons. Shows a shimmering `ToolbarPlaceholderContent` skeleton while loading.
-- The **inspector** (`.inspector(...)`): `WorktreeStatusInspectorContainer`, showing files / changes / git+PR / notifications depending on `inspectorPane`. Files and Changes share `FileExplorerFeature`; Changes renders `TreeState.changesOnly()` (a tree built from the git status snapshot, `FileExplorer/Models/FileExplorerChangesTree.swift`).
+- The **inspector** (`.inspector(...)`): `WorktreeStatusInspectorContainer`, showing files / changes / git+PR / notifications depending on `inspectorPane`. Files and Changes share `FileExplorerFeature`; Changes renders `TreeState.changesOnly()` (a tree built from the git status snapshot, `FileExplorer/Models/FileExplorerChangesTree.swift`). Editor and viewer tabs are wrapped in `DiffSwitchingContent` (`Features/DiffViewer/`), which swaps the renderer for a diff while the app-wide `editorDiffMode` is on (toggled in its docked toolbar; *Show Changes* in the inspector menu turns it on). HEAD is read via `GitClientDependency.headFileContents`, diffed by `LineDiff` and shown in read-only `DiffTextView` columns; `DiffViewerModel` is a `PromptEditSource` (the editors are `PromptEditHost`s), mapping selections through `DiffPromptSelection`.
 - Window-scoped `.focusedSceneAction`/`.focusedAction` wiring for menu commands (open, reveal in Finder, new terminal, split, close tab, search, run script, …).
 
 ## Terminal layer (`Features/Terminal/`)

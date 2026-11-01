@@ -100,6 +100,8 @@ nonisolated struct GitClientDependency: Sendable {
   /// or moving an untracked file to the Trash (recoverable, never a hard
   /// delete). Only ever called for local worktrees, so the Trash path is safe.
   var discardFile: @Sendable (_ path: String, _ root: URL, _ tracked: Bool) async throws -> Void
+  /// A file's bytes at HEAD; nil when HEAD lacks it (new or untracked file).
+  var headFileContents: @Sendable (_ path: String, _ root: URL) async throws -> Data?
   var remoteNames: @Sendable (_ repoRoot: URL) async throws -> [String]
   var fetchRemote: @Sendable (_ remote: String, _ repoRoot: URL) async throws -> Void
   var remoteInfo: @Sendable (_ repositoryRoot: URL) async -> GithubRemoteInfo?
@@ -293,6 +295,7 @@ nonisolated extension GitClientDependency: DependencyKey {
       discardFile: { path, root, tracked in
         try await Self.discardFile(shell: shell, path: path, root: root, tracked: tracked)
       },
+      headFileContents: { path, root in try await GitClient(shell: shell).headFileContents(path, in: root) },
       remoteNames: { try await GitClient(shell: shell).remoteNames(for: $0) },
       fetchRemote: { remote, repoRoot in try await GitClient(shell: shell).fetchRemote(remote, for: repoRoot) },
       remoteInfo: { repositoryRoot in
