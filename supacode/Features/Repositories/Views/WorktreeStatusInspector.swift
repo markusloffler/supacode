@@ -32,14 +32,17 @@ struct WorktreeStatusInspectorContainer: View {
           capabilities: capabilities,
           onPullRequestAction: onPullRequestAction
         )
-      case .files:
+      case .files, .changes:
         WorktreeFilesInspectorView(
           store: repositoriesStore.scope(state: \.fileExplorer, action: \.fileExplorer),
+          mode: pane == .changes ? .changes : .allFiles,
           fileOpenActions: fileOpenActions,
           resolvedOpenAction: resolvedOpenAction,
           onOpenFile: onOpenFile,
           onActivateFile: onActivateFile
         )
+        // Distinct identity per mode so each gets its own outline coordinator.
+        .id(pane)
       case .notifications:
         WorktreeNotificationsInspectorView(
           repositoriesStore: repositoriesStore,

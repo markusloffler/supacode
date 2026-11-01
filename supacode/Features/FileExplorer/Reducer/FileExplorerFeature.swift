@@ -76,6 +76,9 @@ struct FileExplorerFeature {
     /// Keyed by root-relative path, `Self.rootPath` for the root itself.
     var directories: [String: DirectoryNode] = [:]
     var expanded: Set<String> = []
+    /// Directories the user collapsed in the Changes view, which otherwise shows
+    /// every changed directory expanded. Independent of `expanded`.
+    var collapsedChanges: Set<String> = []
     /// Root-relative path of the selected entry.
     var selectedPath: String?
     /// Uncommitted git state for the whole worktree, from one status call.
@@ -164,6 +167,8 @@ struct FileExplorerFeature {
     /// Parent-driven reconciliation of the selected worktree and visibility.
     case contextChanged(Context?, isVisible: Bool)
     case directoryToggled(String)
+    /// Expand or collapse a directory in the Changes view; touches no listings.
+    case changesDirectoryToggled(String)
     case showMoreTapped(directory: String)
     case refreshRequested
     case rowSelected(String?)
@@ -240,6 +245,13 @@ struct FileExplorerFeature {
 
       case .directoryToggled(let path):
         return handleDirectoryToggled(&state, path: path)
+
+      case .changesDirectoryToggled(let path):
+        guard let id = state.activeWorktreeID, state.trees[id] != nil else { return .none }
+        if state.trees[id]?.collapsedChanges.remove(path) == nil {
+          state.trees[id]?.collapsedChanges.insert(path)
+        }
+        return .none
 
       case .showMoreTapped(let directory):
         guard

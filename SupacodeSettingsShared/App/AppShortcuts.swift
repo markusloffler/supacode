@@ -25,7 +25,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
   case focusSplitLeft, focusSplitRight, focusSplitUp, focusSplitDown
   case toggleSplitZoom, equalizeSplits
   case jumpToLatestUnread
-  case togglePullRequestInspector, toggleFilesInspector, toggleNotificationsInspector
+  case togglePullRequestInspector, toggleFilesInspector, toggleChangesInspector, toggleNotificationsInspector
   case startSearch, findNext, findPrevious, useSelectionForFind
   case toggleMarkdownReadMode
 
@@ -44,7 +44,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
       .newTerminalTab, .closeTab, .splitRight, .splitLeft, .splitDown, .splitUp,
       .focusSplitLeft, .focusSplitRight, .focusSplitUp, .focusSplitDown,
       .toggleSplitZoom, .equalizeSplits, .jumpToLatestUnread,
-      .togglePullRequestInspector, .toggleFilesInspector, .toggleNotificationsInspector,
+      .togglePullRequestInspector, .toggleFilesInspector, .toggleChangesInspector, .toggleNotificationsInspector,
       .startSearch, .findNext, .findPrevious, .useSelectionForFind:
       true
     }
@@ -120,6 +120,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .jumpToLatestUnread: "jumpToLatestUnread"
     case .togglePullRequestInspector: "togglePullRequestInspector"
     case .toggleFilesInspector: "toggleFilesInspector"
+    case .toggleChangesInspector: "toggleChangesInspector"
     case .toggleNotificationsInspector: "toggleNotificationsInspector"
     case .startSearch: "startSearch"
     case .findNext: "findNext"
@@ -180,6 +181,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     "jumpToLatestUnread": .jumpToLatestUnread,
     "togglePullRequestInspector": .togglePullRequestInspector,
     "toggleFilesInspector": .toggleFilesInspector,
+    "toggleChangesInspector": .toggleChangesInspector,
     "toggleNotificationsInspector": .toggleNotificationsInspector,
     "startSearch": .startSearch,
     "findNext": .findNext,
@@ -259,6 +261,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .jumpToLatestUnread: "Jump to Latest Unread"
     case .togglePullRequestInspector: "Toggle Pull Request Inspector"
     case .toggleFilesInspector: "Toggle Files Inspector"
+    case .toggleChangesInspector: "Toggle Changes Inspector"
     case .toggleNotificationsInspector: "Toggle Notifications Inspector"
     case .startSearch: "Find"
     case .findNext: "Find Next"
@@ -641,6 +644,9 @@ public enum AppShortcuts {
   public static let toggleFilesInspector = AppShortcut(
     id: .toggleFilesInspector, key: "f", modifiers: [.command, .option]
   )
+  public static let toggleChangesInspector = AppShortcut(
+    id: .toggleChangesInspector, key: "k", modifiers: [.command, .option]
+  )
   public static let toggleNotificationsInspector = AppShortcut(
     id: .toggleNotificationsInspector, key: "n", modifiers: [.command, .option]
   )
@@ -732,7 +738,7 @@ public enum AppShortcuts {
       shortcuts: [
         openWorktree, openFile, revealInFinder, openRepository, addRemoteRepository, cloneRepository,
         openPullRequest, copyPath, runScript, stopRunScript, jumpToLatestUnread,
-        togglePullRequestInspector, toggleFilesInspector, toggleNotificationsInspector,
+        togglePullRequestInspector, toggleFilesInspector, toggleChangesInspector, toggleNotificationsInspector,
         toggleMarkdownReadMode,
       ]
     ),

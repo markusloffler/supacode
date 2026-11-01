@@ -68,7 +68,7 @@ The largest single view file; renders one of several bodies depending on state (
 It also owns:
 
 - The **toolbar** (`WorktreeDetailToolbar` / `WorktreeToolbarContent`): branch/folder title, "Open With" menu, script-run menu, and trailing files/git/notifications toggle buttons. Shows a shimmering `ToolbarPlaceholderContent` skeleton while loading.
-- The **inspector** (`.inspector(...)`): `WorktreeStatusInspectorContainer`, showing files / git+PR / notifications depending on `inspectorPane`.
+- The **inspector** (`.inspector(...)`): `WorktreeStatusInspectorContainer`, showing files / changes / git+PR / notifications depending on `inspectorPane`. Files and Changes share `FileExplorerFeature`; Changes renders `TreeState.changesOnly()` (a tree built from the git status snapshot, `FileExplorer/Models/FileExplorerChangesTree.swift`).
 - Window-scoped `.focusedSceneAction`/`.focusedAction` wiring for menu commands (open, reveal in Finder, new terminal, split, close tab, search, run script, …).
 
 ## Terminal layer (`Features/Terminal/`)

@@ -30,6 +30,8 @@
 > - **Sandbox restart**: when an `sclaude` / `scopilot` session (ai-sandbox) asks to restart with
 >   a wider sandbox, a dialog shows the extended command line with the additions highlighted;
 >   Restart exits the session and runs it with `--resume`. Toggle in Settings → Developer.
+> - **Changes inspector**: a toolbar tab (⌥⌘K) next to Files that shows only files with
+>   uncommitted changes as a tree, with the same git decorations and Stage / Discard actions.
 >
 > **Improvements**
 >

@@ -127,8 +127,11 @@ struct WorktreePullRequestIconBadge: View {
   }
 }
 
-/// Trailing toolbar button that toggles the files inspector pane.
-struct WorktreeFilesToolbarButton: View {
+/// Trailing toolbar button that toggles a plain-glyph inspector pane (Files, Changes).
+struct WorktreeInspectorToolbarToggle: View {
+  let title: String
+  let systemImage: String
+  let shortcut: AppShortcut
   let isSelected: Bool
   // Selection highlight color, derived from the terminal background luminance
   // so the lit state tracks the chrome instead of the system accent.
@@ -140,20 +143,20 @@ struct WorktreeFilesToolbarButton: View {
   @Shared(.settingsFile) private var settingsFile
 
   var body: some View {
-    let shortcut = AppShortcuts.toggleFilesInspector.effective(from: settingsFile.global.shortcutOverrides)
+    let effectiveShortcut = shortcut.effective(from: settingsFile.global.shortcutOverrides)
     Toggle(isOn: Binding(get: { isSelected }, set: { _ in onActivate() })) {
       if isSelected {
-        Label("Files", systemImage: "list.bullet")
+        Label(title, systemImage: systemImage)
           .foregroundStyle(foreground)
       } else {
         // No foreground so the resting glyph matches the other toolbar buttons
         // exactly, including the fade when the window isn't key.
-        Label("Files", systemImage: "list.bullet")
+        Label(title, systemImage: systemImage)
       }
     }
     .tint(tint)
-    .help(AppShortcut.helpText("Toggle Files Inspector", shortcut: shortcut))
-    .accessibilityLabel("Files")
+    .help(AppShortcut.helpText("Toggle \(title) Inspector", shortcut: effectiveShortcut))
+    .accessibilityLabel(title)
   }
 }
 

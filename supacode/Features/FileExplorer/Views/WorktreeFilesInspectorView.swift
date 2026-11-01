@@ -4,10 +4,19 @@ import QuickLook
 import SupacodeSettingsShared
 import SwiftUI
 
+/// What the files pane renders from the shared `FileExplorerFeature` tree.
+enum FileExplorerPaneMode: Equatable {
+  /// The full, lazily listed file tree.
+  case allFiles
+  /// Only files with uncommitted changes (the Changes inspector).
+  case changes
+}
+
 /// Inspector pane rendering the selected worktree's file tree via the
 /// outline bridge; all structure lives in `FileExplorerFeature`.
 struct WorktreeFilesInspectorView: View {
   let store: StoreOf<FileExplorerFeature>
+  var mode: FileExplorerPaneMode = .allFiles
   /// Installed editors that can open a single file, for the Open With submenu.
   let fileOpenActions: [OpenWorktreeAction]
   /// The toolbar's resolved editor, naming the default Open action.
@@ -16,10 +25,14 @@ struct WorktreeFilesInspectorView: View {
   /// Primary open (double-click): runs the open-file script or the system default app.
   let onActivateFile: (URL) -> Void
   @State private var bottomBarInset: CGFloat = 0
+  /// Changes inspector layout: flat path list instead of the directory tree.
+  @Shared(.appStorage("changesInspectorFlatList")) private var isFlatList = false
 
   var body: some View {
     FileExplorerPaneContent(
       store: store,
+      mode: mode,
+      isFlatList: isFlatList,
       fileOpenActions: fileOpenActions,
       resolvedOpenAction: resolvedOpenAction,
       onOpenFile: onOpenFile,
@@ -27,7 +40,10 @@ struct WorktreeFilesInspectorView: View {
       bottomBarInset: bottomBarInset
     )
     .safeAreaBar(edge: .bottom) {
-      FileExplorerPaneFooter(root: store.context?.root)
+      FileExplorerPaneFooter(
+        root: store.context?.root,
+        isFlatList: mode == .changes ? Binding($isFlatList) : nil
+      )
         .onGeometryChange(for: CGFloat.self) {
           $0.size.height
         } action: {
@@ -39,6 +55,8 @@ struct WorktreeFilesInspectorView: View {
 
 private struct FileExplorerPaneFooter: View {
   let root: URL?
+  /// Present only in the Changes inspector, which offers a flat/tree toggle.
+  let isFlatList: Binding<Bool>?
   @Shared(.settingsFile) private var settingsFile
 
   var body: some View {
@@ -48,6 +66,9 @@ private struct FileExplorerPaneFooter: View {
       HStack {
         FileExplorerRootPathControl(url: root, chromeTextSize: settingsFile.global.chromeTextSize)
         Spacer(minLength: 0)
+        if let isFlatList {
+          ChangesLayoutToggle(isFlatList: isFlatList)
+        }
       }
       .padding(.horizontal)
       // No top padding: the blur fade above provides the breathing room.
@@ -98,6 +119,8 @@ private struct FileExplorerRootPathControl: NSViewRepresentable {
 
 private struct FileExplorerPaneContent: View {
   let store: StoreOf<FileExplorerFeature>
+  let mode: FileExplorerPaneMode
+  let isFlatList: Bool
   let fileOpenActions: [OpenWorktreeAction]
   let resolvedOpenAction: OpenWorktreeAction?
   let onOpenFile: (URL, OpenWorktreeAction?) -> Void
@@ -120,6 +143,8 @@ private struct FileExplorerPaneContent: View {
       case nil:
         FileExplorerTreeContent(
           store: store,
+          mode: mode,
+          isFlatList: isFlatList,
           fileOpenActions: fileOpenActions,
           resolvedOpenAction: resolvedOpenAction,
           onOpenFile: onOpenFile,
@@ -138,6 +163,8 @@ private struct FileExplorerPaneContent: View {
 
 private struct FileExplorerTreeContent: View {
   @Bindable var store: StoreOf<FileExplorerFeature>
+  let mode: FileExplorerPaneMode
+  let isFlatList: Bool
   let fileOpenActions: [OpenWorktreeAction]
   let resolvedOpenAction: OpenWorktreeAction?
   let onOpenFile: (URL, OpenWorktreeAction?) -> Void
@@ -151,14 +178,17 @@ private struct FileExplorerTreeContent: View {
 
   var body: some View {
     Group {
-      if let tree = store.activeTree, let rootListing = store.rootListing {
+      if let fullTree = store.activeTree, let rootListing = store.rootListing {
+        let tree = mode == .changes ? fullTree.changesOnly(flat: isFlatList) : fullTree
         FileExplorerOutlineView(
           tree: tree,
           fileOpenActions: fileOpenActions,
           resolvedOpenAction: resolvedOpenAction,
           menuIcon: menuIcon(for:),
           actions: FileExplorerOutlineActions(
-            toggleDirectory: { store.send(.directoryToggled($0)) },
+            toggleDirectory: {
+              store.send(mode == .changes ? .changesDirectoryToggled($0) : .directoryToggled($0))
+            },
             select: { store.send(.rowSelected($0)) },
             activateFile: onActivateFile,
             openFile: onOpenFile,
@@ -187,11 +217,21 @@ private struct FileExplorerTreeContent: View {
         // The empty hint sits behind the transparent outline, which keeps its
         // right-click menu and drops working over the empty area.
         .background {
-          if rootListing.entries.isEmpty, !rootListing.isTruncated, tree.gitStatus.statuses.isEmpty {
-            FileExplorerUnavailableView(
-              title: "Empty Folder",
-              description: "This worktree has no files."
-            )
+          switch mode {
+          case .allFiles:
+            if rootListing.entries.isEmpty, !rootListing.isTruncated, tree.gitStatus.statuses.isEmpty {
+              FileExplorerUnavailableView(
+                title: "Empty Folder",
+                description: "This worktree has no files."
+              )
+            }
+          case .changes:
+            if !tree.gitStatus.statuses.values.contains(where: \.hasVisibleChange) {
+              FileExplorerUnavailableView(
+                title: "No Changes",
+                description: "This worktree has no uncommitted changes."
+              )
+            }
           }
         }
       } else if let failure = store.rootFailure {
@@ -267,6 +307,30 @@ private struct FileExplorerRootFailureView: View {
     case .notFound: "This folder no longer exists on disk."
     case .permissionDenied: "Supacode doesn't have permission to read this folder."
     case .unreadable: "This folder can't be read."
+    }
+  }
+}
+
+/// Flat path list vs. directory tree for the Changes inspector.
+private struct ChangesLayoutToggle: View {
+  @Binding var isFlatList: Bool
+  private static let logger = SupaLogger("FileExplorer")
+
+  var body: some View {
+    Picker("Layout", selection: $isFlatList) {
+      Image(systemName: "list.bullet")
+        .help("Show changed files as a flat list")
+        .tag(true)
+      Image(systemName: "list.bullet.indent")
+        .help("Show changed files as a tree")
+        .tag(false)
+    }
+    .pickerStyle(.segmented)
+    .labelsHidden()
+    .fixedSize()
+    .help("Show changed files as a flat list or a tree")
+    .onChange(of: isFlatList) { _, isFlat in
+      Self.logger.info("[USER] Switched Changes inspector to \(isFlat ? "flat list" : "tree")")
     }
   }
 }

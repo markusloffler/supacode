@@ -1094,7 +1094,9 @@ extension FileExplorerOutlineView.Coordinator: NSMenuDelegate {
     let parent = FileExplorerFeature.parentDirectory(of: path)
     let name = (path as NSString).lastPathComponent
     let listed = tree?.directories[parent]?.listing?.entries.contains { $0.name == name } ?? false
-    return !listed
+    guard listed, let root = tree?.root else { return !listed }
+    // The flat Changes view lists deletions by full path, so check the disk.
+    return !FileManager.default.fileExists(atPath: root.appending(path: path).path(percentEncoded: false))
   }
 
   /// New Folder and New File, both creating in `directory` and starting an

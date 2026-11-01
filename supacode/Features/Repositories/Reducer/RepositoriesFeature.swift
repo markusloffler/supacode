@@ -95,6 +95,8 @@ nonisolated struct WorktreeCreationProgressUpdateThrottle {
 enum WorktreeInspectorPane: Hashable, Sendable {
   case git
   case files
+  /// The files tree narrowed to uncommitted changes; shares `FileExplorerFeature` with `.files`.
+  case changes
   case notifications
 }
 
@@ -3553,6 +3555,7 @@ struct RepositoriesFeature {
         return .none
 
       case .toggleInspectorPane(let target):
+        repositoriesLogger.info("[USER] Toggled inspector pane \(target).")
         if state.inspectorPresented, state.inspectorPane == target {
           state.inspectorPresented = false
         } else {
@@ -5030,7 +5033,7 @@ struct RepositoriesFeature {
     // change, so the child never reads parent state and no parent arm has to
     // remember to notify it.
     Reduce { state, _ in
-      let isVisible = state.inspectorPresented && state.inspectorPane == .files
+      let isVisible = state.inspectorPresented && (state.inspectorPane == .files || state.inspectorPane == .changes)
       guard isVisible || state.fileExplorer.isVisible else { return .none }
       let context =
         isVisible

@@ -884,11 +884,23 @@ struct WorktreeDetailView: View {
         // full-opacity tint reads as a stark solid pill against the glass.
         let chromeForeground = terminalManager.chromeOverlayTint()
         let chromeTint = chromeForeground.opacity(0.2)
-        WorktreeFilesToolbarButton(
+        WorktreeInspectorToolbarToggle(
+          title: "Files",
+          systemImage: "list.bullet",
+          shortcut: AppShortcuts.toggleFilesInspector,
           isSelected: inspectorPresented && inspectorPane == .files,
           tint: chromeTint,
           foreground: chromeForeground,
           onActivate: { onActivateInspector(.files) }
+        )
+        WorktreeInspectorToolbarToggle(
+          title: "Changes",
+          systemImage: "plusminus",
+          shortcut: AppShortcuts.toggleChangesInspector,
+          isSelected: inspectorPresented && inspectorPane == .changes,
+          tint: chromeTint,
+          foreground: chromeForeground,
+          onActivate: { onActivateInspector(.changes) }
         )
         WorktreeGitStatusButton(
           pullRequest: pullRequest,
