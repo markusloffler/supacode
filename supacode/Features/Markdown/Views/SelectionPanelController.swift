@@ -64,6 +64,12 @@ final class SelectionPanelController {
     else { return }
     let window = SelectionPanelWindow(content: content.view)
     window.onSizeChange = { [weak self] in self?.layout() }
+    // A click outside closes the panel with that same click; without this the
+    // first click only moves the keyboard back to the editor.
+    window.onResignKey = { [weak self] in
+      Self.logger.info("[USER] Clicked outside the selection panel")
+      self?.dismiss()
+    }
     self.window = window
     self.range = range
     let anchor = SelectionAnchorView()
@@ -89,6 +95,7 @@ final class SelectionPanelController {
     anchor?.removeFromSuperview()
     anchor = nil
     if let window {
+      window.onResignKey = nil
       window.parent?.removeChildWindow(window)
       window.orderOut(nil)
     }

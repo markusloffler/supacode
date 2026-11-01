@@ -5,6 +5,8 @@ import SwiftUI
 /// The panel floating next to an editor selection: cut/copy/paste, and the
 /// Prompt Edit instruction field when an agent session can take it.
 struct SelectionPanelView: View {
+  private static let logger = SupaLogger("PromptEdit")
+
   enum Command: String {
     case cut, copy, paste
   }
@@ -92,6 +94,9 @@ struct SelectionPanelView: View {
       .background(.background.secondary, in: .rect(cornerRadius: 6))
       .focused($isFieldFocused)
       .onSubmit(submit)
+    if let selection {
+      presetRow(PromptEditPreset.presets(for: selection))
+    }
     HStack(spacing: 12) {
       if targets.count > 1 {
         Picker("Agent", selection: $targetID) {
@@ -130,6 +135,26 @@ struct SelectionPanelView: View {
     .help(help)
   }
 
+  private func presetRow(_ presets: [PromptEditPreset]) -> some View {
+    PresetFlowLayout(spacing: 6) {
+      ForEach(presets) { preset in
+        Button(preset.label) {
+          submit(preset)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(selectedTarget == nil)
+        .help("Send to the agent: \"\(preset.prompt)\" Text in the field is added as a note.")
+      }
+    }
+  }
+
+  private func submit(_ preset: PromptEditPreset) {
+    guard let selectedTarget else { return }
+    Self.logger.info("[USER] Tapped Prompt Edit preset \(preset.label)")
+    onSubmit(PromptEditPreset.instruction(preset, note: instruction), selectedTarget, focusesAgent)
+  }
+
   private func submit() {
     guard canSubmit, let selectedTarget else { return }
     onSubmit(instruction, selectedTarget, focusesAgent)
@@ -153,5 +178,54 @@ struct SelectionPanelView: View {
       case .gone: " (ended)"
       }
     return "\(target.agent.displayName) — \(target.title)\(state)"
+  }
+}
+
+/// Lays the preset buttons out left to right, wrapping onto new rows.
+private struct PresetFlowLayout: Layout {
+  var spacing: CGFloat
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let rows = rows(width: proposal.width ?? .infinity, subviews: subviews)
+    let width = rows.map(\.width).max() ?? 0
+    let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+    return CGSize(width: width, height: height)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    var y = bounds.minY
+    for row in rows(width: bounds.width, subviews: subviews) {
+      var x = bounds.minX
+      for index in row.indices {
+        let size = subviews[index].sizeThatFits(.unspecified)
+        subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+        x += size.width + spacing
+      }
+      y += row.height + spacing
+    }
+  }
+
+  private struct Row {
+    var indices: [Int] = []
+    var width: CGFloat = 0
+    var height: CGFloat = 0
+  }
+
+  private func rows(width: CGFloat, subviews: Subviews) -> [Row] {
+    var rows: [Row] = []
+    var current = Row()
+    for index in subviews.indices {
+      let size = subviews[index].sizeThatFits(.unspecified)
+      let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+      if needed > width, !current.indices.isEmpty {
+        rows.append(current)
+        current = Row()
+      }
+      current.width = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+      current.height = max(current.height, size.height)
+      current.indices.append(index)
+    }
+    if !current.indices.isEmpty { rows.append(current) }
+    return rows
   }
 }

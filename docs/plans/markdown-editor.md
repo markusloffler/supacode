@@ -114,6 +114,7 @@ The layout layer is already content-agnostic (`TabContent` protocol, `ContentRun
 ### UX
 
 1. Select text in the editor → a selection panel (cut/copy/paste + instruction field) floats next to it; right click → "Prompt Edit…" opens it with the field focused. No hotkey (avoids touching upstream `AppShortcuts.swift`).
+   Preset buttons below the field (`PromptEditPreset`) send a detailed prompt in one click, with the field text appended as a note; the set depends on the file (prose or code); in a diff, Explain and Review target the change, Revert is added, and a removed-only selection offers just those three.
 2. Popover anchored to the selection with a single-line `TextField` ("Describe the change…"), Return submits, Esc cancels.
 3. If several agent sessions run in the worktree, a picker in the popover showing agent icon + tab title (default: last focused).
 4. Menu item disabled with an explanatory tooltip when no agent session is running in the worktree.

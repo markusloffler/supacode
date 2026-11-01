@@ -11,6 +11,8 @@
 >   appearance; uses a GitHub theme. Selecting text shows a panel with cut/copy/paste and a
 >   *Prompt Edit* field (also via the context menu) that sends an edit instruction with the file
 >   path and line range to a coding agent of the worktree, queued until the agent is idle.
+>   One-click presets (Explain, Shorten, Improve, …) send a detailed prompt; they differ for
+>   prose and code; in a diff, Explain and Review target the change and Revert is added.
 > - **Text and code editor**: any other text file (UTF-8, up to 2 MB) opens in the same editor
 >   pane, monospaced with highlight.js syntax colouring, a find/replace bar (⌘F, ⌥⌘F) and a soft
 >   wrap toggle. Autosave, reload on external changes and *Prompt Edit…* work like in the Markdown

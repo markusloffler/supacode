@@ -11,6 +11,9 @@ final class SelectionPanelWindow: NSPanel {
     set { hostingView.onSizeChange = newValue }
   }
 
+  /// Called when the panel loses the keyboard, e.g. a click back into the editor.
+  var onResignKey: (() -> Void)?
+
   private let hostingView: SelectionPanelHostingView
 
   init(content: AnyView) {
@@ -34,6 +37,11 @@ final class SelectionPanelWindow: NSPanel {
   override var canBecomeKey: Bool { true }
 
   override var canBecomeMain: Bool { false }
+
+  override func resignKey() {
+    super.resignKey()
+    onResignKey?()
+  }
 
   var contentSize: NSSize { hostingView.fittingSize }
 }
