@@ -41,6 +41,8 @@ Risks: pre-1.0 API, Swift 5.9 package under our Swift 6 strict concurrency. Miti
 
 ### Modifying the library
 
+Current state: `Tuist/Package.swift` pins the fork `github.com/markusloffler/swift-markdown-engine` (branch `markus-mods`, from `0.15.0`) by `revision:`. It adds opt-in rendering options used by the GitHub theme. For engine development, switch temporarily to `.package(path: "../../swift-markdown-engine")`.
+
 If the engine needs changes, use a **GitHub fork**, pinned by exact revision in `Tuist/Package.swift`:
 
 ```swift

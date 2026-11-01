@@ -38,6 +38,9 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/swift-sharing", exact: "2.8.1"),
     .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", exact: "1.8.1"),
     // MARK: Markdown editor
-    .package(url: "https://github.com/nodes-app/swift-markdown-engine", exact: "0.15.0"),
+    // Fork with GitHub-theme rendering options (branch markus-mods).
+    .package(
+      url: "https://github.com/markusloffler/swift-markdown-engine",
+      revision: "f477efabb80a633a4c8dcf266be30d41b7d9555b"),
   ]
 )

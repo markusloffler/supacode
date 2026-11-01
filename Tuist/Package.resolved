@@ -1,5 +1,5 @@
 {
-  "originHash" : "a3de403f1c04396a59fd345647a291ee0c59f0fa91fdeafea455632cefd28d88",
+  "originHash" : "28c43a9a39df60b65a912e29bf5c2fb778f8918a7597c801a98d6fcb205100a7",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -130,10 +130,9 @@
     {
       "identity" : "swift-markdown-engine",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/nodes-app/swift-markdown-engine",
+      "location" : "https://github.com/markusloffler/swift-markdown-engine",
       "state" : {
-        "revision" : "f762ab7ec17472e6d3f3b652b97c747e507c66ec",
-        "version" : "0.15.0"
+        "revision" : "f477efabb80a633a4c8dcf266be30d41b7d9555b"
       }
     },
     {
