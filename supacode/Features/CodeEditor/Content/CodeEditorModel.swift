@@ -61,11 +61,12 @@ final class CodeEditorModel: PromptEditHost {
   func activate() {
     document.startWatching()
     installKeyMonitor()
+    promptEdit.activate()
   }
 
   func deactivate() {
     removeKeyMonitor()
-    promptEdit.dismiss()
+    promptEdit.deactivate()
     highlighter.cancel()
     document.close()
   }

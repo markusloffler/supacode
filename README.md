@@ -8,9 +8,9 @@
 >
 > - **Markdown editor with Prompt Edit**: click a `.md` file in the file explorer to open it
 >   in an editor pane split to the right. Toggle a read mode with ⌘/ and override light/dark
->   appearance; uses a GitHub theme. Select text and choose *Prompt Edit…* to send an edit
->   instruction with the file path and line range to a coding agent of the worktree, queued until
->   the agent is idle.
+>   appearance; uses a GitHub theme. Selecting text shows a panel with cut/copy/paste and a
+>   *Prompt Edit* field (also via the context menu) that sends an edit instruction with the file
+>   path and line range to a coding agent of the worktree, queued until the agent is idle.
 > - **Text and code editor**: any other text file (UTF-8, up to 2 MB) opens in the same editor
 >   pane, monospaced with highlight.js syntax colouring, a find/replace bar (⌘F, ⌥⌘F) and a soft
 >   wrap toggle. Autosave, reload on external changes and *Prompt Edit…* work like in the Markdown

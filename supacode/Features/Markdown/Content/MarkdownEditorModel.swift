@@ -63,11 +63,12 @@ final class MarkdownEditorModel: PromptEditHost {
   func activate() {
     document.startWatching()
     installKeyMonitor()
+    promptEdit.activate()
   }
 
   func deactivate() {
     removeKeyMonitor()
-    promptEdit.dismiss()
+    promptEdit.deactivate()
     document.close()
   }
 

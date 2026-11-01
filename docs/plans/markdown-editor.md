@@ -113,7 +113,7 @@ The layout layer is already content-agnostic (`TabContent` protocol, `ContentRun
 
 ### UX
 
-1. Select text in the editor → right click → "Prompt Edit…". Context menu only, no hotkey (decided; also avoids touching upstream `AppShortcuts.swift`).
+1. Select text in the editor → a selection panel (cut/copy/paste + instruction field) floats next to it; right click → "Prompt Edit…" opens it with the field focused. No hotkey (avoids touching upstream `AppShortcuts.swift`).
 2. Popover anchored to the selection with a single-line `TextField` ("Describe the change…"), Return submits, Esc cancels.
 3. If several agent sessions run in the worktree, a picker in the popover showing agent icon + tab title (default: last focused).
 4. Menu item disabled with an explanatory tooltip when no agent session is running in the worktree.
@@ -173,7 +173,7 @@ The agent edits the file → file watcher reloads the clean buffer (Phase 1). No
 | Question | Decision |
 |---|---|
 | Markdown pane reuse | One markdown pane per worktree; files open as tabs in it |
-| Prompt Edit hotkey | None — context menu only |
+| Prompt Edit hotkey | None — selection panel and context menu |
 | Supported agents | Agent-independent: any `SkillAgent` tracked by `AgentPresenceFeature` |
 | Upstream contribution | Personal mod only; keep merge-friendly |
 
