@@ -17,6 +17,13 @@ struct RepoSectionHeaderView: View {
   }
 
   var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      SidebarSeparatorAboveHeader()
+      titleRow
+    }
+  }
+
+  private var titleRow: some View {
     HStack {
       HStack(spacing: 4) {
         Text(displayName).foregroundStyle(color?.color ?? .secondary)
@@ -41,6 +48,31 @@ struct RepoSectionHeaderView: View {
           .controlSize(.mini)
           .accessibilityLabel("Connecting to remote")
       }
+    }
+  }
+}
+
+extension EnvironmentValues {
+  /// Set on the first section after the Pinned/Active highlight sections, whose
+  /// header then draws a divider on top to set the hoisted rows apart.
+  @Entry var sidebarShowsSeparatorAbove = false
+}
+
+/// The divider a section header draws on top when it follows the highlight
+/// sections; renders nothing otherwise.
+struct SidebarSeparatorAboveHeader: View {
+  @Environment(\.sidebarShowsSeparatorAbove) private var showsSeparator
+
+  var body: some View {
+    if showsSeparator {
+      // The VStack pins the orientation: a bare Divider in a folder's otherwise
+      // empty header lays out horizontally and renders as a vertical stripe.
+      VStack(spacing: 0) {
+        Divider()
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.bottom, 6)
+      .accessibilityHidden(true)
     }
   }
 }

@@ -205,6 +205,12 @@ private struct SidebarSectionDispatcher: View {
   let terminalManager: WorktreeTerminalManager
 
   var body: some View {
+    sectionContent
+      .environment(\.sidebarShowsSeparatorAbove, structure.separatorAboveSectionID == section.id)
+  }
+
+  @ViewBuilder
+  private var sectionContent: some View {
     switch section {
     case .placeholder:
       SidebarPlaceholderView()
@@ -249,7 +255,7 @@ private struct SidebarSectionDispatcher: View {
             terminalManager: terminalManager
           )
         } header: {
-          EmptyView()
+          SidebarSeparatorAboveHeader()
         }
       }
     case .repository(let repositoryID, let groups):

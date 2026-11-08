@@ -319,6 +319,17 @@ struct SidebarStructure: Equatable, Sendable {
   /// Entries and current selection for the sidebar's workspace picker.
   var workspaces: WorkspaceSelector
 
+  /// The section right after the last highlight section (Pinned/Active); its
+  /// header draws a divider on top to separate the hoisted rows from the
+  /// per-repository list. Lives in the header rather than under the highlight
+  /// rows so the sidebar's own inter-section gap sits above the line.
+  var separatorAboveSectionID: Section.SectionID? {
+    guard let index = sections.lastIndex(where: { if case .highlight = $0 { true } else { false } }),
+      index < sections.index(before: sections.endIndex)
+    else { return nil }
+    return sections[index + 1].id
+  }
+
   static let empty = SidebarStructure(
     sections: [],
     hoistedRowIDs: [],
