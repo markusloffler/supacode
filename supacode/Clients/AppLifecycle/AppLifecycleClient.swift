@@ -12,6 +12,8 @@ nonisolated struct AppLifecycleClient: Sendable {
   /// Registers the visibility-toggle chord (nil clears it); false when Carbon
   /// refuses. The app injects the live impl over its `GlobalHotkeyMonitor`.
   var updateGlobalHotkey: @MainActor @Sendable (AppShortcutOverride?) -> Bool
+  /// Registers the jump-to-latest-unread chord (nil clears it); false when Carbon refuses.
+  var updateGlobalJumpToUnreadHotkey: @MainActor @Sendable (AppShortcutOverride?) -> Bool
 }
 
 nonisolated extension AppLifecycleClient: DependencyKey {
@@ -24,6 +26,10 @@ nonisolated extension AppLifecycleClient: DependencyKey {
     updateGlobalHotkey: { _ in
       SupaLogger("GlobalHotkey").error("updateGlobalHotkey called without a wired monitor.")
       return false
+    },
+    updateGlobalJumpToUnreadHotkey: { _ in
+      SupaLogger("GlobalHotkey").error("updateGlobalJumpToUnreadHotkey called without a wired monitor.")
+      return false
     }
   )
 
@@ -31,7 +37,9 @@ nonisolated extension AppLifecycleClient: DependencyKey {
     terminate: unimplemented("AppLifecycleClient.terminate"),
     applyVisibility: unimplemented("AppLifecycleClient.applyVisibility", placeholder: true),
     surfaceMainWindow: unimplemented("AppLifecycleClient.surfaceMainWindow", placeholder: true),
-    updateGlobalHotkey: unimplemented("AppLifecycleClient.updateGlobalHotkey", placeholder: true)
+    updateGlobalHotkey: unimplemented("AppLifecycleClient.updateGlobalHotkey", placeholder: true),
+    updateGlobalJumpToUnreadHotkey: unimplemented(
+      "AppLifecycleClient.updateGlobalJumpToUnreadHotkey", placeholder: true)
   )
 }
 

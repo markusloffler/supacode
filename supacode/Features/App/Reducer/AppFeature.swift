@@ -168,6 +168,7 @@ struct AppFeature {
     var lastKnownEnabledForgeIDs: Set<ForgeID>?
     var lastKnownTerminalHibernationEnabled: Bool
     var lastKnownGlobalHotkey: AppShortcutOverride?
+    var lastKnownGlobalJumpToUnreadHotkey: AppShortcutOverride?
     var pendingDeeplinks: [Deeplink] = []
     var isDeeplinkReferenceRequested = false
     var isSettingsWindowRequested = false
@@ -210,6 +211,7 @@ struct AppFeature {
       lastKnownAppVisibility = settings.appVisibility
       lastKnownTerminalHibernationEnabled = settings.terminalHibernationEnabled
       lastKnownGlobalHotkey = settings.globalToggleVisibilityHotkey
+      lastKnownGlobalJumpToUnreadHotkey = settings.globalJumpToUnreadHotkey
       // Seed from settings so `state.allScripts` doesn't start empty before the
       // first `settingsChanged` delegate fires. Globals aren't worktree-scoped,
       // so deselection (line below in `selectedWorktreeChanged(nil)`)
@@ -404,6 +406,7 @@ struct AppFeature {
       case .appLaunched:
         // A chord restored from disk fires no settingsChanged delta, so register it once here.
         let startupHotkey = state.settings.globalToggleVisibilityHotkey
+        let startupJumpHotkey = state.settings.globalJumpToUnreadHotkey
         return .merge(
           refreshInstalledOpenActionsEffect(current: state.installedOpenActions),
           .send(.repositories(.task)),
@@ -414,6 +417,12 @@ struct AppFeature {
             guard startupHotkey != nil else { return }
             if !appLifecycleClient.updateGlobalHotkey(startupHotkey) {
               await send(.settings(.setGlobalHotkeyRegistrationFailed(true)))
+            }
+          },
+          .run { @MainActor send in
+            guard startupJumpHotkey != nil else { return }
+            if !appLifecycleClient.updateGlobalJumpToUnreadHotkey(startupJumpHotkey) {
+              await send(.settings(.setGlobalJumpToUnreadHotkeyRegistrationFailed(true)))
             }
           },
           .run { _ in
@@ -783,6 +792,9 @@ struct AppFeature {
         let newGlobalHotkey = settings.globalToggleVisibilityHotkey
         let globalHotkeyChanged = newGlobalHotkey != state.lastKnownGlobalHotkey
         state.lastKnownGlobalHotkey = newGlobalHotkey
+        let newJumpHotkey = settings.globalJumpToUnreadHotkey
+        let jumpHotkeyChanged = newJumpHotkey != state.lastKnownGlobalJumpToUnreadHotkey
+        state.lastKnownGlobalJumpToUnreadHotkey = newJumpHotkey
         // Compare IDs as a set: name/command edits and pure reorders should not re-prune recency.
         let globalScriptIDsChanged = Set(state.globalScripts.map(\.id)) != Set(settings.globalScripts.map(\.id))
         state.globalScripts = settings.globalScripts
@@ -888,6 +900,16 @@ struct AppFeature {
             .run { @MainActor send in
               let succeeded = appLifecycleClient.updateGlobalHotkey(newGlobalHotkey)
               await send(.settings(.setGlobalHotkeyRegistrationFailed(newGlobalHotkey != nil && !succeeded)))
+            }
+          )
+        }
+        if jumpHotkeyChanged {
+          effects.append(
+            .run { @MainActor send in
+              let succeeded = appLifecycleClient.updateGlobalJumpToUnreadHotkey(newJumpHotkey)
+              await send(
+                .settings(.setGlobalJumpToUnreadHotkeyRegistrationFailed(newJumpHotkey != nil && !succeeded))
+              )
             }
           )
         }

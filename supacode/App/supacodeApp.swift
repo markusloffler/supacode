@@ -248,7 +248,10 @@ struct SupacodeApp: App {
     } withDependencies: { values in
       // Inject the app-owned monitor so the reducer's register/unregister
       // intent reaches the single Carbon instance created at launch.
-      values.appLifecycleClient.updateGlobalHotkey = { globalHotkeyMonitor.apply($0) }
+      values.appLifecycleClient.updateGlobalHotkey = { globalHotkeyMonitor.apply($0, for: .toggleVisibility) }
+      values.appLifecycleClient.updateGlobalJumpToUnreadHotkey = {
+        globalHotkeyMonitor.apply($0, for: .jumpToLatestUnread)
+      }
       values[LayoutContentFactory.self] = Self.makeContentFactory(
         runtime: runtime,
         terminalManager: terminalManager
@@ -654,7 +657,7 @@ struct SupacodeApp: App {
           .environment(commandKeyObserver)
           .environment(openActionIcons)
           .appChromeTextSize(store.settings.chromeTextSize)
-          .background { GlobalHotkeyInstaller(monitor: globalHotkeyMonitor) }
+          .background { GlobalHotkeyInstaller(monitor: globalHotkeyMonitor, store: store) }
       }
       .openSettingsOnSelection(store: store)
       .openDeeplinkReferenceOnRequest(store: store)

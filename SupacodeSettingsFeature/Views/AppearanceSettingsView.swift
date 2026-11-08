@@ -50,7 +50,26 @@ public struct AppearanceSettingsView: View {
           Text("Visibility")
           Text("Show Supacode in the Dock, the menu bar, or both.")
         }
-        GlobalHotkeySettingRow(store: store)
+        GlobalHotkeySettingRow(
+          store: store,
+          title: "Global hotkey",
+          subtitle: "Toggle Supacode from anywhere.",
+          recordHelp: "Record a system-wide hotkey to toggle Supacode.",
+          hotkey: store.globalToggleVisibilityHotkey,
+          otherGlobalHotkey: store.globalJumpToUnreadHotkey,
+          registrationFailed: store.globalHotkeyRegistrationFailed,
+          setAction: SettingsFeature.Action.setGlobalToggleHotkey
+        )
+        GlobalHotkeySettingRow(
+          store: store,
+          title: "Jump to latest unread",
+          subtitle: "Bring Supacode forward and open the latest unread notification from anywhere.",
+          recordHelp: "Record a system-wide hotkey to jump to the latest unread notification.",
+          hotkey: store.globalJumpToUnreadHotkey,
+          otherGlobalHotkey: store.globalToggleVisibilityHotkey,
+          registrationFailed: store.globalJumpToUnreadHotkeyRegistrationFailed,
+          setAction: SettingsFeature.Action.setGlobalJumpToUnreadHotkey
+        )
       }
       Section {
         Picker(selection: $store.confirmCloseTab) {
@@ -145,15 +164,23 @@ public struct AppearanceSettingsView: View {
   }
 }
 
-// System-wide show/hide hotkey, sharing the recorder UX with the shortcut table.
+// A system-wide hotkey (show/hide, jump to unread), sharing the recorder UX with the shortcut table.
 private struct GlobalHotkeySettingRow: View {
   @Bindable var store: StoreOf<SettingsFeature>
+  let title: String
+  let subtitle: String
+  let recordHelp: String
+  let hotkey: AppShortcutOverride?
+  /// The other global chord, so the two can't be bound to the same keys.
+  let otherGlobalHotkey: AppShortcutOverride?
+  let registrationFailed: Bool
+  let setAction: (AppShortcutOverride?) -> SettingsFeature.Action
   @State private var isRecording = false
 
   var body: some View {
     LabeledContent {
       HStack(spacing: 6) {
-        if let hotkey = store.globalToggleVisibilityHotkey {
+        if let hotkey {
           Button {
             isRecording = true
           } label: {
@@ -163,7 +190,7 @@ private struct GlobalHotkeySettingRow: View {
           .buttonStyle(.plain)
           .help("Change the shortcut.")
           Button {
-            store.send(.setGlobalToggleHotkey(nil))
+            store.send(setAction(nil))
           } label: {
             Image(systemName: "xmark")
               .imageScale(.small)
@@ -181,30 +208,30 @@ private struct GlobalHotkeySettingRow: View {
           Button("Record") {
             isRecording = true
           }
-          .help("Record a system-wide hotkey to toggle Supacode.")
+          .help(recordHelp)
         }
       }
       .popover(isPresented: $isRecording) {
         HotkeyRecorderPopover(
-          onRecorded: { store.send(.setGlobalToggleHotkey($0)) },
+          onRecorded: { store.send(setAction($0)) },
           onCancelled: { isRecording = false },
           conflictChecker: conflictName(for:)
         )
       }
       .contextMenu {
         Button("Record Shortcut…") { isRecording = true }
-        if store.globalToggleVisibilityHotkey != nil {
+        if hotkey != nil {
           Divider()
-          Button("Remove Shortcut") { store.send(.setGlobalToggleHotkey(nil)) }
+          Button("Remove Shortcut") { store.send(setAction(nil)) }
         }
       }
     } label: {
-      Text("Global hotkey")
-      if store.globalHotkeyRegistrationFailed {
+      Text(title)
+      if registrationFailed {
         Text("That hotkey is unavailable. Another app may already use it.")
           .foregroundStyle(.red)
       } else {
-        Text("Toggle Supacode from anywhere.")
+        Text(subtitle)
       }
     }
   }
@@ -214,6 +241,7 @@ private struct GlobalHotkeySettingRow: View {
   private func conflictName(for override: AppShortcutOverride) -> String? {
     let display = override.displayString
     if AppShortcutOverride.allReservedDisplayStrings().contains(display) { return "the system" }
+    if otherGlobalHotkey?.displayString == display { return "another global hotkey" }
     for shortcut in AppShortcuts.all {
       guard let effective = shortcut.effective(from: store.shortcutOverrides) else { continue }
       if effective.display == display { return shortcut.displayName }

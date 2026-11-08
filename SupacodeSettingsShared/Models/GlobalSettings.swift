@@ -196,6 +196,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   public var hoverFocusMode: HoverFocusMode
   /// System-wide chord that toggles the app; nil (the default) leaves it unbound.
   public var globalToggleVisibilityHotkey: AppShortcutOverride?
+  /// System-wide chord that brings the app forward and jumps to the latest
+  /// unread notification; nil (the default) leaves it unbound.
+  public var globalJumpToUnreadHotkey: AppShortcutOverride?
 
   public static let `default` = GlobalSettings(
     appearanceMode: .dark,
@@ -293,7 +296,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     automaticRepositoryRefreshEnabled: Bool = true,
     backgroundOpaqueOverride: Bool = false,
     hoverFocusMode: HoverFocusMode = .never,
-    globalToggleVisibilityHotkey: AppShortcutOverride? = nil
+    globalToggleVisibilityHotkey: AppShortcutOverride? = nil,
+    globalJumpToUnreadHotkey: AppShortcutOverride? = nil
   ) {
     self.appearanceMode = appearanceMode
     self.defaultEditorID = defaultEditorID
@@ -345,6 +349,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.backgroundOpaqueOverride = backgroundOpaqueOverride
     self.hoverFocusMode = hoverFocusMode
     self.globalToggleVisibilityHotkey = globalToggleVisibilityHotkey
+    self.globalJumpToUnreadHotkey = globalJumpToUnreadHotkey
   }
 
   /// Keys for reading renamed settings fields that no longer
@@ -590,6 +595,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     globalToggleVisibilityHotkey =
       ((try? container.decodeIfPresent(AppShortcutOverride.self, forKey: .globalToggleVisibilityHotkey)) ?? nil)
       ?? Self.default.globalToggleVisibilityHotkey
+    globalJumpToUnreadHotkey =
+      ((try? container.decodeIfPresent(AppShortcutOverride.self, forKey: .globalJumpToUnreadHotkey)) ?? nil)
+      ?? Self.default.globalJumpToUnreadHotkey
   }
 }
 

@@ -96,6 +96,9 @@ public struct SettingsFeature {
     /// True when the last registration of the global hotkey failed (chord
     /// unavailable). Transient UI state, never persisted.
     public var globalHotkeyRegistrationFailed = false
+    public var globalJumpToUnreadHotkey: AppShortcutOverride?
+    /// Registration-failure flag for `globalJumpToUnreadHotkey`; never persisted.
+    public var globalJumpToUnreadHotkeyRegistrationFailed = false
     public var cliInstallState = CLIInstallState.checking
     /// Installed editors in menu order, resolved once off the picker's body.
     public var installedOpenActions: [OpenWorktreeAction]
@@ -238,6 +241,7 @@ public struct SettingsFeature {
       automaticRepositoryRefreshEnabled = settings.automaticRepositoryRefreshEnabled
       hoverFocusMode = settings.hoverFocusMode
       globalToggleVisibilityHotkey = settings.globalToggleVisibilityHotkey
+      globalJumpToUnreadHotkey = settings.globalJumpToUnreadHotkey
       defaultWorktreeBaseDirectoryPath =
         SupacodePaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath) ?? ""
     }
@@ -253,6 +257,8 @@ public struct SettingsFeature {
     case setAppVisibility(AppVisibility)
     case setGlobalToggleHotkey(AppShortcutOverride?)
     case setGlobalHotkeyRegistrationFailed(Bool)
+    case setGlobalJumpToUnreadHotkey(AppShortcutOverride?)
+    case setGlobalJumpToUnreadHotkeyRegistrationFailed(Bool)
     case setAutomatedActionPolicy(AutomatedActionPolicy)
     case showNotificationPermissionAlert(errorMessage: String?)
     case updateShortcut(id: AppShortcutID, override: AppShortcutOverride?)
@@ -433,6 +439,7 @@ public struct SettingsFeature {
         state.automaticRepositoryRefreshEnabled = normalizedSettings.automaticRepositoryRefreshEnabled
         state.hoverFocusMode = normalizedSettings.hoverFocusMode
         state.globalToggleVisibilityHotkey = normalizedSettings.globalToggleVisibilityHotkey
+        state.globalJumpToUnreadHotkey = normalizedSettings.globalJumpToUnreadHotkey
         state.defaultWorktreeBaseDirectoryPath = normalizedSettings.defaultWorktreeBaseDirectoryPath ?? ""
         state.syncGlobalDefaults()
         synchronizeRepositorySelection(for: &state)
@@ -481,6 +488,18 @@ public struct SettingsFeature {
 
       case .setGlobalHotkeyRegistrationFailed(let failed):
         state.globalHotkeyRegistrationFailed = failed
+        return .none
+
+      case .setGlobalJumpToUnreadHotkey(let override):
+        let normalized = override?.isEnabled == true ? override : nil
+        guard state.globalJumpToUnreadHotkey != normalized else { return .none }
+        state.globalJumpToUnreadHotkey = normalized
+        state.globalJumpToUnreadHotkeyRegistrationFailed = false
+        state.syncGlobalDefaults()
+        return persist(state)
+
+      case .setGlobalJumpToUnreadHotkeyRegistrationFailed(let failed):
+        state.globalJumpToUnreadHotkeyRegistrationFailed = failed
         return .none
 
       case .setAutomatedActionPolicy(let policy):
@@ -1232,5 +1251,6 @@ extension SettingsFeature.State {
     settings.automaticRepositoryRefreshEnabled = automaticRepositoryRefreshEnabled
     settings.hoverFocusMode = hoverFocusMode
     settings.globalToggleVisibilityHotkey = globalToggleVisibilityHotkey
+    settings.globalJumpToUnreadHotkey = globalJumpToUnreadHotkey
   }
 }
