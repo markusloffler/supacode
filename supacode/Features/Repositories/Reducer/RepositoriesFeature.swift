@@ -232,6 +232,10 @@ struct RepositoriesFeature {
     var sidebarSelectedWorktreeIDs: Set<Worktree.ID> = []
     var nextPendingSidebarRevealID = 0
     var pendingSidebarReveal: PendingSidebarReveal?
+    /// Order ⌥Tab cycles the Active section in, kept across steps: Active
+    /// membership and order shift as rows are visited (an unread-only row
+    /// leaves Active once selected), so walking the live list would jump.
+    var activeCycleOrder: [Worktree.ID] = []
     /// Browser-style back/forward stacks for worktree selection.
     /// Fresh selections push the previous worktree onto `back` and
     /// clear `forward`; the dedicated `worktreeHistoryBack` /
@@ -441,6 +445,8 @@ struct RepositoriesFeature {
     case selectWorktreeAtHotkeySlot(Int)
     case selectNextWorktree
     case selectPreviousWorktree
+    case selectNextActiveWorktree
+    case selectPreviousActiveWorktree
     case worktreeHistoryBack
     case worktreeHistoryForward
     case revealSelectedWorktreeInSidebar
@@ -4221,6 +4227,18 @@ struct RepositoriesFeature {
         }
         return .send(.selectWorktree(id, focusTerminal: true))
 
+      case .selectNextActiveWorktree:
+        guard let id = state.nextActiveWorktreeID(byOffset: 1) else {
+          return .run { _ in NSSound.beep() }
+        }
+        return .send(.selectWorktree(id, focusTerminal: true))
+
+      case .selectPreviousActiveWorktree:
+        guard let id = state.nextActiveWorktreeID(byOffset: -1) else {
+          return .run { _ in NSSound.beep() }
+        }
+        return .send(.selectWorktree(id, focusTerminal: true))
+
       case .worktreeHistoryBack:
         return state.navigateWorktreeHistoryEffect(direction: .back)
 
@@ -6088,6 +6106,36 @@ extension RepositoriesFeature.State {
 
   var selectedFailedRepositoryID: Repository.ID? {
     selection?.failedRepositoryID
+  }
+
+  /// Cycles through the sidebar's Active highlight section, wrapping at both
+  /// ends, along `activeCycleOrder`: rows keep their position from the previous
+  /// step and newly active rows join at the end. The selected row anchors the
+  /// step even after it left Active. Without an anchor, forward lands on the
+  /// first row and backward on the last. Nil when there is no Active section
+  /// (none active, or "Group Active" is off).
+  mutating func nextActiveWorktreeID(byOffset offset: Int) -> Worktree.ID? {
+    let liveIDs =
+      sidebarStructure.sections.lazy.compactMap { section -> [Worktree.ID]? in
+        guard case .highlight(.active, let rowIDs) = section else { return nil }
+        return rowIDs
+      }.first ?? []
+    let liveSet = Set(liveIDs)
+    var order = activeCycleOrder.filter { liveSet.contains($0) || $0 == selectedWorktreeID }
+    let known = Set(order)
+    order += liveIDs.filter { !known.contains($0) }
+    activeCycleOrder = order.filter(liveSet.contains)
+    guard !liveIDs.isEmpty else { return nil }
+    let step = offset >= 0 ? 1 : -1
+    guard let currentID = selectedWorktreeID, let anchor = order.firstIndex(of: currentID) else {
+      return step > 0 ? activeCycleOrder.first : activeCycleOrder.last
+    }
+    var index = anchor
+    for _ in order.indices {
+      index = (index + step + order.count) % order.count
+      if liveSet.contains(order[index]) { return order[index] }
+    }
+    return nil
   }
 
   func worktreeID(byOffset offset: Int) -> Worktree.ID? {

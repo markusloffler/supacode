@@ -741,6 +741,7 @@ final class GhosttySurfaceView: NSView, Identifiable {
 
   override func keyDown(with event: NSEvent) {
     healOcclusionFromUserInput(requiresVisibleWindow: false)
+    if forwardNonCommandAppShortcut(event) { return }
     guard let surface else {
       interpretKeyEvents([event])
       return
@@ -1671,6 +1672,21 @@ final class GhosttySurfaceView: NSView, Identifiable {
 
   private func isTerminalUnreachableChord(_ event: NSEvent) -> Bool {
     AppShortcuts.isTerminalUnreachableChord(event, overrides: settingsFile.global.shortcutOverrides)
+  }
+
+  /// AppKit only routes ⌘/⌃ chords through `performKeyEquivalent`, so an app shortcut without
+  /// either (e.g. ⌥Tab) arrives here as a plain key press; hand it to the main menu instead of
+  /// the shell. Falls back to the terminal when the menu doesn't take it (item disabled/missing).
+  private func forwardNonCommandAppShortcut(_ event: NSEvent) -> Bool {
+    guard !hasMarkedText() else { return false }
+    guard bridge.state.keySequenceActive != true, bridge.state.keyTableDepth == 0 else { return false }
+    let overrides = settingsFile.global.shortcutOverrides
+    guard AppShortcuts.isNonCommandTerminalReachableChord(event, overrides: overrides),
+      let menu = NSApp.mainMenu
+    else { return false }
+    let handled = menu.performKeyEquivalent(with: event)
+    surfaceLogger.debug("Forwarded non-command app shortcut to the main menu, handled: \(handled).")
+    return handled
   }
 
   private func shouldAttemptMenu(for flags: ghostty_binding_flags_e) -> Bool {

@@ -595,6 +595,7 @@ extension RepositoriesFeature.Action {
     // Selection changes refresh both selection-derived caches.
     case .selectionChanged, .selectWorktree, .selectArchivedWorktrees,
       .selectNextWorktree, .selectPreviousWorktree, .selectWorktreeAtHotkeySlot,
+      .selectNextActiveWorktree, .selectPreviousActiveWorktree,
       .worktreeHistoryBack, .worktreeHistoryForward,
       .setSidebarSelectedWorktreeIDs:
       return [.selectedWorktreeSlice, .sidebarSelectionSlice]

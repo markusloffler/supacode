@@ -13,6 +13,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
   case newWorktree, refreshWorktrees, archivedWorktrees, archiveWorktree
   case deleteWorktree, confirmWorktreeAction
   case selectNextWorktree, selectPreviousWorktree
+  case selectNextActiveWorktree, selectPreviousActiveWorktree
   case worktreeHistoryBack, worktreeHistoryForward
   case selectWorktree(Int)
   case selectTab(Int)
@@ -37,7 +38,8 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .commandPalette, .worktreeSwitcher, .openSettings, .checkForUpdates, .showMainWindow,
       .toggleLeftSidebar, .revealInSidebar, .expandAllSidebarGroups, .collapseAllSidebarGroups,
       .cycleWorkspace, .newWorktree, .refreshWorktrees, .archivedWorktrees, .confirmWorktreeAction,
-      .selectNextWorktree, .selectPreviousWorktree, .worktreeHistoryBack, .worktreeHistoryForward,
+      .selectNextWorktree, .selectPreviousWorktree, .selectNextActiveWorktree, .selectPreviousActiveWorktree,
+      .worktreeHistoryBack, .worktreeHistoryForward,
       .selectWorktree, .selectTab, .selectNextTab, .selectPreviousTab,
       .openWorktree, .openFile, .revealInFinder, .openRepository, .addRemoteRepository, .cloneRepository,
       .openPullRequest, .copyPath, .runScript, .stopRunScript, .renameTab, .toggleWindowMode,
@@ -87,6 +89,8 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .confirmWorktreeAction: "confirmWorktreeAction"
     case .selectNextWorktree: "selectNextWorktree"
     case .selectPreviousWorktree: "selectPreviousWorktree"
+    case .selectNextActiveWorktree: "selectNextActiveWorktree"
+    case .selectPreviousActiveWorktree: "selectPreviousActiveWorktree"
     case .worktreeHistoryBack: "worktreeHistoryBack"
     case .worktreeHistoryForward: "worktreeHistoryForward"
     case .selectWorktree(let index): "selectWorktree\(index)"
@@ -149,6 +153,8 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     "confirmWorktreeAction": .confirmWorktreeAction,
     "selectNextWorktree": .selectNextWorktree,
     "selectPreviousWorktree": .selectPreviousWorktree,
+    "selectNextActiveWorktree": .selectNextActiveWorktree,
+    "selectPreviousActiveWorktree": .selectPreviousActiveWorktree,
     "worktreeHistoryBack": .worktreeHistoryBack,
     "worktreeHistoryForward": .worktreeHistoryForward,
     "openWorktree": .openWorktree,
@@ -228,6 +234,8 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .confirmWorktreeAction: "Confirm Worktree Action"
     case .selectNextWorktree: "Select Next Worktree"
     case .selectPreviousWorktree: "Select Previous Worktree"
+    case .selectNextActiveWorktree: "Select Next Active Worktree"
+    case .selectPreviousActiveWorktree: "Select Previous Active Worktree"
     case .worktreeHistoryBack: "Back in Worktree History"
     case .worktreeHistoryForward: "Forward in Worktree History"
     case .selectWorktree(let index): "Select Worktree \(index == 0 ? 10 : index)"
@@ -543,6 +551,14 @@ public enum AppShortcuts {
     id: .selectPreviousWorktree,
     keyEquivalent: .upArrow, ghosttyKeyName: "arrow_up", modifiers: [.command, .control]
   )
+  public static let selectNextActiveWorktree = AppShortcut(
+    id: .selectNextActiveWorktree,
+    keyEquivalent: .tab, ghosttyKeyName: "tab", modifiers: [.option]
+  )
+  public static let selectPreviousActiveWorktree = AppShortcut(
+    id: .selectPreviousActiveWorktree,
+    keyEquivalent: .tab, ghosttyKeyName: "tab", modifiers: [.option, .shift]
+  )
   public static let worktreeHistoryBack = AppShortcut(
     id: .worktreeHistoryBack,
     keyEquivalent: .leftArrow, ghosttyKeyName: "arrow_left", modifiers: [.command, .control]
@@ -715,6 +731,7 @@ public enum AppShortcuts {
       shortcuts: [
         newWorktree, refreshWorktrees, archivedWorktrees, archiveWorktree,
         deleteWorktree, confirmWorktreeAction, selectNextWorktree, selectPreviousWorktree,
+        selectNextActiveWorktree, selectPreviousActiveWorktree,
         worktreeHistoryBack, worktreeHistoryForward,
       ]
     ),
@@ -771,6 +788,19 @@ public enum AppShortcuts {
         return nil
       }
       return line
+    }
+  }
+
+  // True when `event` matches a terminal-reachable shortcut with neither ⌘ nor ⌃ (e.g. ⌥Tab).
+  // AppKit never offers such chords as key equivalents, so the terminal must forward them.
+  public static func isNonCommandTerminalReachableChord(
+    _ event: NSEvent,
+    overrides: [AppShortcutID: AppShortcutOverride]
+  ) -> Bool {
+    guard event.modifierFlags.isDisjoint(with: [.command, .control]) else { return false }
+    return all.contains { shortcut in
+      guard shortcut.id.isReachableFromTerminal, let effective = shortcut.effective(from: overrides) else { return false }
+      return effective.matches(event)
     }
   }
 

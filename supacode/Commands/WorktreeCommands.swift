@@ -43,6 +43,8 @@ private struct WorktreeMainMenu: Commands {
     let snapshot = store.worktreeMenuSnapshot
     let overrides = snapshot.shortcutOverrides
     let selectNext = AppShortcuts.selectNextWorktree.effective(from: overrides)
+    let selectNextActive = AppShortcuts.selectNextActiveWorktree.effective(from: overrides)
+    let selectPreviousActive = AppShortcuts.selectPreviousActiveWorktree.effective(from: overrides)
     let selectPrevious = AppShortcuts.selectPreviousWorktree.effective(from: overrides)
     let historyBack = AppShortcuts.worktreeHistoryBack.effective(from: overrides)
     let historyForward = AppShortcuts.worktreeHistoryForward.effective(from: overrides)
@@ -145,6 +147,16 @@ private struct WorktreeMainMenu: Commands {
       }
       .appKeyboardShortcut(selectPrevious)
       .help(AppShortcut.helpText("Select Previous", shortcut: selectPrevious))
+      Button("Select Next Active", systemImage: "arrow.down.circle") {
+        store.send(.repositories(.selectNextActiveWorktree))
+      }
+      .appKeyboardShortcut(selectNextActive)
+      .help(AppShortcut.helpText("Select Next Active Worktree", shortcut: selectNextActive))
+      Button("Select Previous Active", systemImage: "arrow.up.circle") {
+        store.send(.repositories(.selectPreviousActiveWorktree))
+      }
+      .appKeyboardShortcut(selectPreviousActive)
+      .help(AppShortcut.helpText("Select Previous Active Worktree", shortcut: selectPreviousActive))
       Button("Back in Worktree History", systemImage: "chevron.left") {
         store.send(.repositories(.worktreeHistoryBack))
       }
