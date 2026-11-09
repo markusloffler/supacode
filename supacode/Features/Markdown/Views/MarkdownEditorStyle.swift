@@ -119,9 +119,8 @@ struct MarkdownEditorStyle {
     configuration.lists.indentPerLevel = round(19 * typeScale)
     configuration.lists.markerSlotWidth = round(19 * typeScale)
     configuration.lists.bulletDiameter = round(0.35 * fontSize)
-    // #write { max-width: 860px; padding: 30px }
-    configuration.readingWidth = round(860 * typeScale)
-    configuration.readingWidthShrinksToFit = true
+    // #write { padding: 30px }; no max-width so the text fills the panel width.
+    configuration.readingWidth = nil
     configuration.textInsets = TextInsets(horizontal: round(30 * typeScale), vertical: round(30 * typeScale))
 
     return Self(
