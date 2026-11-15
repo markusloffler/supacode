@@ -444,6 +444,7 @@ public nonisolated enum OpenWorktreeAction: CaseIterable, Identifiable, Hashable
     .xcode,
     .typora,
     .fork,
+    .finder,
   ]
 
   public static func normalizedDefaultEditorID(
