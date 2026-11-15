@@ -290,57 +290,83 @@ private struct TitleView: View, Equatable {
     let isBusy = isLifecycleBusy || isTaskRunning
     let isEmphasized = backgroundProminence == .increased
     let accentStyle = accent.shapeStyle(emphasized: isEmphasized)
+    // Highlight rows (Pinned / Active) swap the lines: the repo line leads in
+    // the title font and the worktree title follows in the subtitle font.
     VStack(alignment: .leading, spacing: 0) {
-      let titleText = Text(name)
-        .appFont(.body)
-        .lineLimit(1)
-      if let customTint, !isEmphasized {
-        titleText.foregroundStyle(customTint.color).shimmer(isActive: isBusy)
-      } else {
-        titleText.shimmer(isActive: isBusy)
-      }
       switch subtitle {
       case .none:
-        EmptyView()
+        titleLine(font: .body, isBusy: isBusy, isEmphasized: isEmphasized)
       case .plain(let text):
+        titleLine(font: .body, isBusy: isBusy, isEmphasized: isEmphasized)
         Text(text)
           .appFont(.footnote)
           .foregroundStyle(accentStyle)
           .lineLimit(1)
       case .highlight(let repo, let repoColor, let trail, let hostInfo):
-        let repoStyle: AnyShapeStyle =
-          isEmphasized
-          ? AnyShapeStyle(.secondary)
-          : repoColor.map { AnyShapeStyle($0.color) } ?? AnyShapeStyle(.secondary)
-        // `.layoutPriority(1)` on the repo / host makes the trail yield first under a narrow sidebar.
-        HStack(spacing: 0) {
-          Text(repo)
-            .foregroundStyle(repoStyle)
-            .lineLimit(1)
-            .layoutPriority(1)
-          if let hostInfo {
-            Image(systemName: "wifi")
-              .imageScale(.small)
-              .foregroundStyle(.secondary)
-              .help(hostInfo)
-              .accessibilityLabel("Remote host \(hostInfo)")
-              .padding(.leading, 3)
-              .layoutPriority(1)
-          }
-          if let trail {
-            Text(" · ")
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-            Text(trail)
-              .foregroundStyle(accentStyle)
-              .lineLimit(1)
-          }
-        }
-        .appFont(.footnote)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(trail.map { "\(repo), \($0)" } ?? repo)
+        highlightLine(
+          repo: repo,
+          repoColor: repoColor,
+          trail: trail,
+          hostInfo: hostInfo,
+          accentStyle: accentStyle,
+          isEmphasized: isEmphasized
+        )
+        titleLine(font: .footnote, isBusy: isBusy, isEmphasized: isEmphasized)
       }
     }
+  }
+
+  @ViewBuilder
+  private func titleLine(font: Font.TextStyle, isBusy: Bool, isEmphasized: Bool) -> some View {
+    let titleText = Text(name)
+      .appFont(font)
+      .lineLimit(1)
+    if let customTint, !isEmphasized {
+      titleText.foregroundStyle(customTint.color).shimmer(isActive: isBusy)
+    } else {
+      titleText.shimmer(isActive: isBusy)
+    }
+  }
+
+  private func highlightLine(
+    repo: String,
+    repoColor: RepositoryColor?,
+    trail: String?,
+    hostInfo: String?,
+    accentStyle: AnyShapeStyle,
+    isEmphasized: Bool
+  ) -> some View {
+    let repoStyle: AnyShapeStyle =
+      isEmphasized
+      ? AnyShapeStyle(.secondary)
+      : repoColor.map { AnyShapeStyle($0.color) } ?? AnyShapeStyle(.secondary)
+    // `.layoutPriority(1)` on the repo / host makes the trail yield first under a narrow sidebar.
+    return HStack(spacing: 0) {
+      Text(repo)
+        .foregroundStyle(repoStyle)
+        .lineLimit(1)
+        .layoutPriority(1)
+      if let hostInfo {
+        Image(systemName: "wifi")
+          .imageScale(.small)
+          .foregroundStyle(.secondary)
+          .help(hostInfo)
+          .accessibilityLabel("Remote host \(hostInfo)")
+          .padding(.leading, 3)
+          .layoutPriority(1)
+      }
+      if let trail {
+        Text(" · ")
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+        Text(trail)
+          .foregroundStyle(accentStyle)
+          .lineLimit(1)
+      }
+    }
+    .appFont(.body)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(trail.map { "\(repo), \($0)" } ?? repo)
   }
 }
 
