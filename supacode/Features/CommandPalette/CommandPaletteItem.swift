@@ -75,6 +75,8 @@ struct CommandPaletteItem: Identifiable, Equatable {
     case openRepository
     case addRemoteRepository
     case worktreeSelect(Worktree.ID)
+    /// A repository, from the ⌘⇧P palette: jumps to its last-used worktree.
+    case selectProject(Repository.ID)
     case openSettings
     case newWorktree
     case removeWorktree(Worktree.ID, Repository.ID)
@@ -120,7 +122,7 @@ struct CommandPaletteItem: Identifiable, Equatable {
       .rerunFailedJobs,
       .openFailingCheckDetails:
       true
-    case .worktreeSelect, .removeWorktree, .archiveWorktree:
+    case .worktreeSelect, .selectProject, .removeWorktree, .archiveWorktree:
       false
     case .renameBranch, .customizeRepositoryAppearance, .customizeWorktreeAppearance:
       true
@@ -151,6 +153,7 @@ struct CommandPaletteItem: Identifiable, Equatable {
       .rerunFailedJobs,
       .openFailingCheckDetails,
       .worktreeSelect,
+      .selectProject,
       .removeWorktree,
       .archiveWorktree,
       .renameBranch,
@@ -189,6 +192,7 @@ struct CommandPaletteItem: Identifiable, Equatable {
       .rerunFailedJobs,
       .openFailingCheckDetails,
       .worktreeSelect,
+      .selectProject,
       .removeWorktree,
       .archiveWorktree,
       .renameBranch,

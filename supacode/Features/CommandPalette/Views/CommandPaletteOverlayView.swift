@@ -316,7 +316,7 @@ private struct CommandPaletteRowView: View {
       .layoutCommand,
       .openPullRequest, .markPullRequestReady, .mergePullRequest, .closePullRequest, .copyFailingJobURL,
       .copyCiFailureLogs,
-      .rerunFailedJobs, .openFailingCheckDetails, .worktreeSelect,
+      .rerunFailedJobs, .openFailingCheckDetails, .worktreeSelect, .selectProject,
       .customizeRepositoryAppearance, .customizeWorktreeAppearance, .openProjectFile:
       return nil
     case .removeWorktree:
@@ -376,6 +376,8 @@ private struct CommandPaletteRowView: View {
       return "exclamationmark.triangle"
     case .worktreeSelect:
       return nil
+    case .selectProject:
+      return "folder"
     case .removeWorktree:
       return "trash"
     case .archiveWorktree:
@@ -409,7 +411,7 @@ private struct CommandPaletteRowView: View {
       .copyCiFailureLogs,
       .rerunFailedJobs, .openFailingCheckDetails:
       return true
-    case .worktreeSelect, .removeWorktree, .archiveWorktree, .openProjectFile:
+    case .worktreeSelect, .selectProject, .removeWorktree, .archiveWorktree, .openProjectFile:
       return false
     case .renameBranch, .customizeRepositoryAppearance, .customizeWorktreeAppearance:
       return true
@@ -527,6 +529,8 @@ private struct CommandPaletteRowView: View {
     switch row.kind {
     case .worktreeSelect:
       base = "Switch to \(row.title)"
+    case .selectProject:
+      base = "Jump to this project's last-used worktree"
     case .checkForUpdates:
       base = "Check for Updates"
     case .openRepository:

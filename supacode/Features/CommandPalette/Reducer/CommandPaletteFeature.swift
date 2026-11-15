@@ -58,6 +58,7 @@ struct CommandPaletteFeature {
   @CasePathable
   enum Delegate: Equatable {
     case selectWorktree(Worktree.ID)
+    case selectProject(Repository.ID)
     case checkForUpdates
     case openSettings
     case newWorktree
@@ -373,9 +374,36 @@ struct CommandPaletteFeature {
       items.append(renameBranchItem)
     }
     items.append(contentsOf: customizeAppearanceItems(from: repositories))
+    items.append(contentsOf: projectItems(from: repositories))
     // Worktree navigation is the ⌘P switcher's job (see `worktreeSwitcherItems`);
     // the ⌘⇧P command palette lists actions only, not worktree rows.
     return items
+  }
+
+  /// One "Project: <name>" row per repository, in sidebar order, with the
+  /// root path as subtitle. Non-global, so they surface only once the user
+  /// types. Repositories mid-removal are skipped.
+  static func projectItems(from repositories: RepositoriesFeature.State) -> [CommandPaletteItem] {
+    repositories.orderedRepositoryIDs().compactMap { repositoryID in
+      guard let repository = repositories.repositories[id: repositoryID],
+        repositories.removingRepositoryIDs[repositoryID] == nil
+      else { return nil }
+      let name = repositories.repositoryName(for: repositoryID) ?? repository.name
+      let path = repository.rootURL.path(percentEncoded: false)
+      let subtitle: String =
+        if let host = repository.host {
+          "\(host.authority):\(path)"
+        } else {
+          (path as NSString).abbreviatingWithTildeInPath
+        }
+      return CommandPaletteItem(
+        id: CommandPaletteItemID.selectProject(repositoryID),
+        title: "Project: \(name)",
+        subtitle: subtitle,
+        kind: .selectProject(repositoryID),
+        subtitleTint: repositories.sidebar.sections[repositoryID]?.color
+      )
+    }
   }
 
   /// The "Rename Branch" action for the selected git worktree, or `nil` when the
@@ -483,6 +511,7 @@ struct CommandPaletteFeature {
     for repository in repositories {
       ids.append(contentsOf: CommandPaletteItemID.pullRequestIDs(repositoryID: repository.id))
       ids.append(CommandPaletteItemID.customizeRepositoryAppearance(repository.id))
+      ids.append(CommandPaletteItemID.selectProject(repository.id))
       for worktree in repository.worktrees {
         ids.append(CommandPaletteItemID.worktreeSelect(worktree.id))
         ids.append(CommandPaletteItemID.renameBranch(worktree.id))
@@ -829,6 +858,10 @@ private enum CommandPaletteItemID {
     "worktree.\(worktreeID).select"
   }
 
+  static func selectProject(_ repositoryID: Repository.ID) -> CommandPaletteItem.ID {
+    "repository.\(repositoryID).select"
+  }
+
   static func renameBranch(_ worktreeID: Worktree.ID) -> CommandPaletteItem.ID {
     "worktree.\(worktreeID).rename-branch"
   }
@@ -935,6 +968,8 @@ private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPalette
   switch kind {
   case .worktreeSelect(let id):
     return .selectWorktree(id)
+  case .selectProject(let id):
+    return .selectProject(id)
   case .checkForUpdates:
     return .checkForUpdates
   case .openSettings:
@@ -993,7 +1028,7 @@ private func selectedEntryDelegateAction(
     return .toggleWindowMode
   case .layoutCommand(let command):
     return .layoutCommand(command)
-  case .checkForUpdates, .openRepository, .addRemoteRepository, .worktreeSelect, .openSettings,
+  case .checkForUpdates, .openRepository, .addRemoteRepository, .worktreeSelect, .selectProject, .openSettings,
     .newWorktree, .removeWorktree, .archiveWorktree, .viewArchivedWorktrees, .refreshWorktrees,
     .ghosttyCommand, .openPullRequest, .markPullRequestReady, .mergePullRequest,
     .closePullRequest, .copyFailingJobURL, .copyCiFailureLogs, .rerunFailedJobs,
@@ -1045,6 +1080,7 @@ private func pullRequestDelegateAction(
     return .openFailingCheckDetails(worktreeID)
   case .layoutCommand,
     .worktreeSelect,
+    .selectProject,
     .checkForUpdates,
     .openSettings,
     .newWorktree,

@@ -1763,6 +1763,9 @@ struct AppFeature {
         // that already passed focusTerminal: true.
         return .send(.repositories(.selectWorktree(worktreeID, focusTerminal: true)))
 
+      case .commandPalette(.delegate(.selectProject(let repositoryID))):
+        return .send(.repositories(.selectProject(repositoryID)))
+
       case .commandPalette(.delegate(.dismissedWithoutSelection)):
         // Always-focused-terminal invariant. Cancellation paths (Esc, outside
         // tap, programmatic close) don't carry a destination; refocus the

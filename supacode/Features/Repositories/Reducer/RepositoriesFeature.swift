@@ -403,6 +403,11 @@ struct RepositoriesFeature {
     /// enters the first one when the sidebar is currently unfiltered. Never
     /// selects "All Workspaces" — the picker is the way back out.
     case cycleSidebarWorkspace
+    /// ⌘⇧P "Project: …" row. Selects the repository's last-used worktree
+    /// (else its main worktree / folder row), first switching the sidebar
+    /// workspace when the active filter hides the repository and expanding
+    /// its section when collapsed.
+    case selectProject(Repository.ID)
     case setOpenPanelPresented(Bool)
     case requestAddRemoteRepository
     case requestEditRemoteRepository(Repository.ID)
@@ -3814,6 +3819,21 @@ struct RepositoriesFeature {
         repositoriesLogger.debug("[USER] Cycled sidebar workspace to \(next)")
         state.$sidebarSelectedWorkspace.withLock { $0 = next }
         return .none
+
+      case .selectProject(let repositoryID):
+        guard let worktreeID = state.projectJumpTargetID(for: repositoryID) else {
+          repositoriesLogger.warning("Project jump found no worktree for \(repositoryID).")
+          return .none
+        }
+        if let workspace = state.workspaceToReveal(repositoryID) {
+          repositoriesLogger.debug("Switching sidebar workspace to \(workspace) to reveal \(repositoryID).")
+          state.$sidebarSelectedWorkspace.withLock { $0 = workspace }
+        }
+        repositoriesLogger.debug("[USER] Jumped to project \(repositoryID) at worktree \(worktreeID).")
+        let select = Effect<Action>.send(.selectWorktree(worktreeID, focusTerminal: true))
+        guard state.sidebar.sections[repositoryID]?.collapsed == true else { return select }
+        repositoriesLogger.debug("Expanding collapsed project \(repositoryID) for the jump.")
+        return .concatenate(.send(.repositoryExpansionChanged(repositoryID, isExpanded: true)), select)
 
       case .setOpenPanelPresented(let isPresented):
         state.isOpenPanelPresented = isPresented
@@ -7424,5 +7444,30 @@ extension String {
   /// Returns the remote name if this ref starts with `<remote>/`, matched against known remotes.
   fileprivate nonisolated func matchingRemote(from remotes: [String]) -> String? {
     GitReferenceQueries.remotePrefixMatch(ref: self, remoteNames: remotes)?.remote
+  }
+}
+
+extension RepositoriesFeature.State {
+  /// Where a project jump lands: the repository's most recently used idle
+  /// worktree, else its main worktree (or folder row), else its first row.
+  func projectJumpTargetID(for repositoryID: Repository.ID) -> Worktree.ID? {
+    let rows = orderedSidebarItems(includingRepositoryIDs: [repositoryID]).filter { $0.lifecycle == .idle }
+    let rowIDs = Set(rows.map(\.id))
+    if let recent = worktreeMRU.first(where: { rowIDs.contains($0) }) {
+      return recent
+    }
+    return (rows.first(where: \.isMainWorktree) ?? rows.first)?.id
+  }
+
+  /// The workspace to switch to so `repositoryID` becomes visible, or `nil`
+  /// when it already is (unfiltered sidebar, or filed under "All workspaces"
+  /// or the active workspace).
+  func workspaceToReveal(_ repositoryID: Repository.ID) -> Int? {
+    guard let selected = computeWorkspaceSelector().selected,
+      let assigned = sidebar.sections[repositoryID]?.workspace,
+      SidebarWorkspace.isValid(assigned),
+      assigned != selected
+    else { return nil }
+    return assigned
   }
 }

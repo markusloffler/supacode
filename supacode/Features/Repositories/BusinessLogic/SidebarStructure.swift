@@ -498,7 +498,7 @@ extension RepositoriesFeature.Action {
       .sidebarSectionSortChanged,
       // The workspace filter decides which repository sections (and which of
       // their hoisted rows) the structure carries at all.
-      .setSidebarWorkspace, .cycleSidebarWorkspace,
+      .setSidebarWorkspace, .cycleSidebarWorkspace, .selectProject,
       .repositoryExpansionChanged, .branchNestExpansionChanged,
       .setAllSidebarGroupsExpanded,
       .setMoveNotifiedWorktreeToTop,
