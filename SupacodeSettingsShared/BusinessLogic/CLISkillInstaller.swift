@@ -2,9 +2,10 @@ import Foundation
 
 private nonisolated let skillInstallerLogger = SupaLogger("Settings")
 
-/// Installs the generated agent skills (`supacode-cli` and `supacode-deeplinks`)
-/// into a coding agent's config directory. Both skills install, update, and
-/// uninstall together as one component.
+/// Installs the generated agent skills (`supacode-cli`, `supacode-deeplinks` and
+/// `show-me`) into a coding agent's config directory. They install, update, and
+/// uninstall together as one component, so an install missing a newly added skill
+/// reads as outdated and the once-per-session auto-update adds it.
 nonisolated struct CLISkillInstaller {
   let homeDirectoryURL: URL
   /// Custom-folder installs point this at the chosen config dir; when nil the
@@ -40,12 +41,16 @@ nonisolated struct CLISkillInstaller {
   private func plannedFiles(for agent: SkillAgent) -> [PlannedFile] {
     let cliDir = skillDir(for: agent, skillName: CLISkillContent.cliSkillName)
     let deeplinksDir = skillDir(for: agent, skillName: CLISkillContent.deeplinksSkillName)
+    let showMeDir = skillDir(for: agent, skillName: CLISkillContent.showMeSkillName)
     return [
       PlannedFile(url: cliDir.appending(path: "SKILL.md", directoryHint: .notDirectory)) {
         try CLISkillContent.cliSkill()
       },
       PlannedFile(url: deeplinksDir.appending(path: "SKILL.md", directoryHint: .notDirectory)) {
         try CLISkillContent.deeplinksSkill()
+      },
+      PlannedFile(url: showMeDir.appending(path: "SKILL.md", directoryHint: .notDirectory)) {
+        try CLISkillContent.showMeSkill()
       },
     ]
   }
@@ -118,7 +123,7 @@ nonisolated struct CLISkillInstaller {
   // MARK: - Uninstall.
 
   func uninstall(_ agent: SkillAgent) throws {
-    for skillName in [CLISkillContent.cliSkillName, CLISkillContent.deeplinksSkillName] {
+    for skillName in CLISkillContent.skillNames {
       do {
         try FileManager.default.removeItem(at: skillDir(for: agent, skillName: skillName))
       } catch let error as CocoaError where error.code == .fileNoSuchFile || error.code == .fileReadNoSuchFile {

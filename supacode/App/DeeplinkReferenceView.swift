@@ -50,6 +50,13 @@ struct DeeplinkReferenceView: View {
   private static let generalRows: [DeeplinkEntry] = [
     .init(url: "supacode://", description: "Bring app to front."),
     .init(url: "supacode://help", description: "Open this reference."),
+    .init(
+      url: "supacode://file/show?path=<absolute-path>",
+      description:
+        "Open a file in the editor of the worktree containing it and select a range. Positions are 1-based "
+        + "LINE or LINE:COLUMN, the end is inclusive, and a position without a column spans the whole line.",
+      params: "&from=<line[:col]>&to=<line[:col]>"
+    ),
   ]
 
   private static let worktreeRows: [DeeplinkEntry] = [

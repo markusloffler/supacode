@@ -40,6 +40,7 @@ Any worktree action, and `repo/<repo_id>/worktree/new`, accepts `background=true
 ```
 supacode://                                   # Bring app to front.
 supacode://help                               # Open the deeplink reference window.
+supacode://file/show?path=<absolute-path>&from=<line[:col]>&to=<line[:col]>   # Open a file in the editor of the worktree containing it and select the range (1-based, end inclusive; no column = whole line).
 ```
 
 ## Worktree

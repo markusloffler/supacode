@@ -7,6 +7,7 @@ struct SupacodeCLI: ParsableCommand {
     abstract: "Control Supacode from the command line.",
     subcommands: [
       OpenCommand.self,
+      ShowCommand.self,
       WorktreeCommand.self,
       PaneCommand.self,
       TabCommand.self,

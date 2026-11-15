@@ -61,6 +61,8 @@ private nonisolated enum DeeplinkParser {
         )
       else { return nil }
       return .worktree(id: id, action: action, background: parseBoolFlag("background", from: queryItems))
+    case "file":
+      return parseFile(pathSegments: pathSegments, queryItems: queryItems)
     case "repo":
       return parseRepo(pathSegments: pathSegments, queryItems: queryItems)
     case "help":
@@ -396,6 +398,34 @@ private nonisolated enum DeeplinkParser {
   }
 
   // MARK: - Repo.
+
+  // MARK: - File.
+
+  private static func parseFile(pathSegments: [String], queryItems: [URLQueryItem]) -> Deeplink? {
+    // Expected: "show?path=<absolute-path>[&from=<line[:col]>[&to=<line[:col]>]]".
+    guard pathSegments == ["show"] else {
+      logger.warning("Unrecognized file deeplink path")
+      return nil
+    }
+    guard let path = queryItems.first(where: { $0.name == "path" })?.value, path.hasPrefix("/") else {
+      logger.warning("File show deeplink missing or relative path query param")
+      return nil
+    }
+    let from = queryItems.first(where: { $0.name == "from" })?.value
+    let to = queryItems.first(where: { $0.name == "to" })?.value
+    guard let from else {
+      guard to == nil else {
+        logger.warning("File show deeplink has to without from")
+        return nil
+      }
+      return .fileShow(path: URL(filePath: path, directoryHint: .notDirectory), selection: nil)
+    }
+    guard let selection = EditorSelection(from: from, to: to) else {
+      logger.warning("File show deeplink has an invalid range: from=\(from) to=\(to ?? "nil")")
+      return nil
+    }
+    return .fileShow(path: URL(filePath: path, directoryHint: .notDirectory), selection: selection)
+  }
 
   private static func parseRepo(
     pathSegments: [String],

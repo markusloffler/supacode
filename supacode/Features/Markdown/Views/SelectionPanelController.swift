@@ -27,6 +27,8 @@ final class SelectionPanelController {
   private var selectionObserver: (any NSObjectProtocol)?
   private var layoutObservers: [any NSObjectProtocol] = []
   private var pending: DispatchWorkItem?
+  /// A selection set by code (`supacode show`), not by the user: it never opens the panel.
+  private var programmaticRange: NSRange?
 
   nonisolated init() {}
 
@@ -52,6 +54,14 @@ final class SelectionPanelController {
     pending?.cancel()
     pending = nil
     dismiss()
+  }
+
+  /// Marks `range` as selected by code so it does not open the panel; the next
+  /// different selection clears the mark.
+  func ignoreSelection(_ range: NSRange) {
+    programmaticRange = range
+    pending?.cancel()
+    pending = nil
   }
 
   /// Shows the panel for `range` right away.
@@ -118,6 +128,10 @@ final class SelectionPanelController {
     let selected = textView.selectedRange()
     if let range, range != selected {
       dismiss()
+    }
+    if let programmaticRange {
+      guard programmaticRange != selected else { return }
+      self.programmaticRange = nil
     }
     guard selected.length > 0, window == nil else { return }
     schedulePresentation()

@@ -1958,6 +1958,10 @@ struct AppFeature {
           .send(.repositories(.selectWorktree(worktreeID))),
           .send(.commandPalette(.togglePresentInMode(.commands)))
         )
+      case .terminalEvent(.fileShowRequested(let worktreeID, let surfaceID, let path, let selection)):
+        return handleTerminalFileShow(
+          path: path, selection: selection, sourceWorktreeID: worktreeID, sourceSurfaceID: surfaceID, state: &state)
+
       case .terminalEvent(.setupScriptConsumed(let worktreeID)):
         return .send(.repositories(.worktreeCreationSettled(worktreeID)))
 
@@ -2462,6 +2466,8 @@ struct AppFeature {
       )
     case .repoOpen(let path):
       return .send(.repositories(.openRepositories([path])))
+    case .fileShow(let path, let selection):
+      return handleFileShowDeeplink(path: path, selection: selection, state: &state)
     case .repoWorktreeNew(
       let repositoryID,
       let branch,

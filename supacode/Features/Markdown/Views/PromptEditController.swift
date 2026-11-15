@@ -26,6 +26,11 @@ final class PromptEditController {
     panel.stop()
   }
 
+  /// A selection made by code (`supacode show`) must not pop the panel up.
+  func ignoreSelection(_ range: NSRange) {
+    panel.ignoreSelection(range)
+  }
+
   /// Prepends "Prompt Edit…" to the editor's context menu. Disabled, with the
   /// reason as tooltip, when nothing is selected or no agent session runs.
   func buildContextMenu(_ menu: NSMenu, selection range: NSRange) -> NSMenu {

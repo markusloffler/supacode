@@ -759,6 +759,9 @@ final class WorktreeTerminalManager {
     host.onAgentHookEvent = { [weak self] event in
       self?.dispatchHookEvent(event)
     }
+    host.onShowFileRequested = { [weak self] surfaceID, path, selection in
+      self?.emit(.fileShowRequested(worktreeID: worktree.id, surfaceID: surfaceID, path: path, selection: selection))
+    }
     host.onNotificationReceived = { [weak self] surfaceID, title, body, isViewed in
       self?.emit(
         .notificationReceived(

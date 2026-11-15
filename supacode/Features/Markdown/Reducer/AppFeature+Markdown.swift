@@ -12,6 +12,14 @@ enum MarkdownAction: Equatable {
   // MARK: Diff viewer
   /// Turn on diff mode and open the file, showing its uncommitted changes.
   case openDiff(URL)
+  /// Open a file in a given worktree and select a range: `supacode show`. With
+  /// `returnFocusTo`, that terminal surface keeps focus instead of the editor.
+  case show(URL, worktreeID: Worktree.ID, selection: EditorSelection?, returnFocusTo: UUID?)
+  /// Select a range in the editor showing `relativePath`, once it is in the layout.
+  case revealSelection(
+    relativePath: String, worktreeID: Worktree.ID, selection: EditorSelection, takesFocus: Bool)
+  /// Hand focus back to a terminal surface after `show` opened an editor.
+  case returnFocus(surfaceID: UUID, worktreeID: Worktree.ID)
   case promptEditSubmitted(PromptEditRequest)
   case promptEditCancelled(UUID)
   /// The editor took input focus; pane focus follows it, like a terminal.
@@ -62,6 +70,14 @@ struct MarkdownAppReducer: Reducer {
       case .markdown(.openDiff(let fileURL)):
         $editorDiffMode.withLock { $0 = true }
         return openInEditor(fileURL, state: &state)
+      case .markdown(.show(let fileURL, let worktreeID, let selection, let returnFocusTo)):
+        return show(
+          fileURL, worktreeID: worktreeID, selection: selection, returnFocusTo: returnFocusTo, state: &state)
+      case .markdown(.revealSelection(let relativePath, let worktreeID, let selection, let takesFocus)):
+        return revealSelection(
+          selection, relativePath: relativePath, worktreeID: worktreeID, takesFocus: takesFocus, state: state)
+      case .markdown(.returnFocus(let surfaceID, let worktreeID)):
+        return returnFocus(to: surfaceID, worktreeID: worktreeID, state: state)
       case .markdown(.promptEditSubmitted(let request)):
         return submit(request, state: &state)
       case .markdown(.promptEditCancelled(let requestID)):
@@ -102,6 +118,80 @@ struct MarkdownAppReducer: Reducer {
       return .none
     }
     Self.logger.info("[USER] Opened file in editor: \(relativePath)")
+    return open(fileURL, relativePath: relativePath, in: worktree, state: &state)
+  }
+
+  /// `supacode show`: opens the file like the explorer does, in the worktree
+  /// the deeplink resolved, then selects the range once the editor exists.
+  private func show(
+    _ fileURL: URL, worktreeID: Worktree.ID, selection: EditorSelection?, returnFocusTo surfaceID: UUID?,
+    state: inout State
+  ) -> Effect<Action> {
+    guard let worktree = state.repositories.worktree(for: worktreeID), worktree.host == nil,
+      let relativePath = MarkdownOpenRouter.relativePath(of: fileURL, under: worktree.workingDirectory)
+    else {
+      Self.logger.warning("show: \(fileURL.path(percentEncoded: false)) is not in local worktree \(worktreeID)")
+      return .none
+    }
+    Self.logger.info("Agent showed file in editor: \(relativePath) selection=\(String(describing: selection))")
+    // Diff mode hides the editor behind the file's diff; the agent asked for the text.
+    if editorDiffMode { $editorDiffMode.withLock { $0 = false } }
+    let keepsTerminalFocus = surfaceID != nil
+    var effects = [
+      open(fileURL, relativePath: relativePath, in: worktree, focusesEditor: !keepsTerminalFocus, state: &state)
+    ]
+    if let selection {
+      effects.append(
+        .send(
+          .markdown(
+            .revealSelection(
+              relativePath: relativePath, worktreeID: worktree.id, selection: selection,
+              takesFocus: !keepsTerminalFocus))))
+    }
+    if let surfaceID {
+      effects.append(.send(.markdown(.returnFocus(surfaceID: surfaceID, worktreeID: worktree.id))))
+    }
+    return .concatenate(effects)
+  }
+
+  /// Hands the selection to the live editor showing `relativePath`.
+  private func revealSelection(
+    _ selection: EditorSelection, relativePath: String, worktreeID: Worktree.ID, takesFocus: Bool, state: State
+  ) -> Effect<Action> {
+    guard let layout = state.terminals.layouts[id: worktreeID]?.layout,
+      let tab = MarkdownOpenRouter.editorTab(for: relativePath, in: layout)
+    else {
+      Self.logger.warning("revealSelection: no editor tab for \(relativePath) in \(worktreeID)")
+      return .none
+    }
+    let contentID = tab.content.id
+    return .run { @MainActor [contentRuntime] _ in
+      MarkdownContent.reveal(selection, in: contentID, takesFocus: takesFocus, runtime: contentRuntime)
+    }
+  }
+
+  /// Refocuses the terminal that ran `supacode show`, so opening the editor does
+  /// not pull focus away from its session. Skipped when the terminal's tab is
+  /// not on screen in its own pane: refocusing it would hide the editor again.
+  private func returnFocus(to surfaceID: UUID, worktreeID: Worktree.ID, state: State) -> Effect<Action> {
+    guard let worktree = state.repositories.worktree(for: worktreeID),
+      let layout = state.terminals.layouts[id: worktreeID]?.layout,
+      let located = layout.tab(containingContent: ContentID(rawValue: surfaceID)),
+      located.pane.selectedTabID == located.tab.id
+    else {
+      Self.logger.debug("returnFocus: surface \(surfaceID) is not visible in \(worktreeID); focus stays on the editor")
+      return .none
+    }
+    Self.logger.debug("returnFocus: refocusing surface \(surfaceID) after show")
+    let tabID = located.tab.id
+    return .run { @MainActor [terminalClient] _ in
+      terminalClient.send(.focusSurface(worktree, tabID: tabID, surfaceID: surfaceID))
+    }
+  }
+
+  private func open(
+    _ fileURL: URL, relativePath: String, in worktree: Worktree, focusesEditor: Bool = true, state: inout State
+  ) -> Effect<Action> {
     let layoutState = state.terminals.layouts[id: worktree.id]
     let layout = layoutState?.layout ?? PaneLayout()
     let route = MarkdownOpenRouter.route(
@@ -135,7 +225,7 @@ struct MarkdownAppReducer: Reducer {
       effects.append(.send(.terminals(.attachLayout(worktreeID: worktree.id, titlePrefix: worktree.name))))
     }
     effects.append(.send(.terminals(.layouts(.element(id: worktree.id, action: layoutAction)))))
-    if let focusExisting {
+    if focusesEditor, let focusExisting {
       effects.append(
         .run { @MainActor [contentRuntime] _ in
           MarkdownContent.focusEditor(focusExisting, runtime: contentRuntime)

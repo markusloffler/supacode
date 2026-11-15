@@ -43,6 +43,8 @@ final class WorktreeContentHost {
   @ObservationIgnored var onSurfacesHibernated: ((Set<UUID>) -> Void)?
   @ObservationIgnored var onDormancyChanged: (() -> Void)?
   @ObservationIgnored var onAgentHookEvent: ((AgentHookEvent) -> Void)?
+  /// `supacode show` asked to open a file of this worktree (OSC 3008 `kind=show`).
+  @ObservationIgnored var onShowFileRequested: ((UUID, URL, EditorSelection?) -> Void)?
 
   var socketPath: String?
   var notificationsEnabled = true
@@ -450,11 +452,35 @@ final class WorktreeContentHost {
   // MARK: - Agent presence + context signals.
 
   func handleContextSignal(surfaceID: UUID, id: String, metadata: String) {
-    if AgentPresenceOSC.isNotifyMetadata(metadata) {
+    if ShowFileOSC.isShowMetadata(metadata) {
+      handleShowFileSignal(surfaceID: surfaceID, id: id, metadata: metadata)
+    } else if AgentPresenceOSC.isNotifyMetadata(metadata) {
       handleNotifySignal(surfaceID: surfaceID, id: id, metadata: metadata)
     } else {
       handlePresenceSignal(surfaceID: surfaceID, id: id, metadata: metadata)
     }
+  }
+
+  /// `supacode show` from a terminal. Only a file inside this local worktree is
+  /// shown, since anything writing to the terminal can forge the signal.
+  private func handleShowFileSignal(surfaceID: UUID, id: String, metadata: String) {
+    guard isKnownSurface(surfaceID) else {
+      Self.logger.debug("Dropped show-file signal for unknown surface \(surfaceID)")
+      return
+    }
+    guard let request = ShowFileOSC.parse(id: id, metadata: metadata) else {
+      Self.logger.warning("Dropped malformed show-file signal (\(metadata.utf8.count) metadata bytes)")
+      return
+    }
+    guard worktree.host == nil,
+      MarkdownOpenRouter.relativePath(of: request.path, under: worktree.workingDirectory) != nil
+    else {
+      Self.logger.warning(
+        "Dropped show-file signal for \(request.path.path(percentEncoded: false)) outside worktree \(worktree.id)")
+      return
+    }
+    Self.logger.info("Show-file signal from surface \(surfaceID): \(request.path.lastPathComponent)")
+    onShowFileRequested?(surfaceID, request.path, request.selection)
   }
 
   private func handlePresenceSignal(surfaceID: UUID, id: String, metadata: String) {

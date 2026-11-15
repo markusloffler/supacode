@@ -31,6 +31,13 @@ final class MarkdownEditorModel: PromptEditHost {
   @ObservationIgnored private(set) var isEditorFocused = false
   @ObservationIgnored let promptEdit = PromptEditController()
   @ObservationIgnored @Shared(.settingsFile) private var settingsFile
+  // Read mode joins soft breaks length-preserving, so source offsets fit either mode.
+  @ObservationIgnored private(set) lazy var selectionRevealer = EditorSelectionRevealer(
+    text: { [weak self] in self?.document.text ?? "" },
+    textView: { [weak self] in self?.textView },
+    // A shown range is not a user selection: keep the Prompt Edit panel closed.
+    willSelect: { [weak self] in self?.promptEdit.ignoreSelection($0) }
+  )
 
   init(
     contentID: ContentID,
@@ -76,6 +83,11 @@ final class MarkdownEditorModel: PromptEditHost {
   func focusEditor() {
     wantsFocus = true
     fulfillPendingFocus()
+  }
+
+  /// Selects and scrolls to `selection` once the text view shows the document.
+  func reveal(_ selection: EditorSelection, takesFocus: Bool) {
+    selectionRevealer.reveal(selection, takesFocus: takesFocus)
   }
 
   /// Called by the hosting view whenever it lands in a window or lays out.

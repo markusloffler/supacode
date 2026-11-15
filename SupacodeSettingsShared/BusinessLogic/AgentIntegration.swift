@@ -63,7 +63,7 @@ nonisolated struct AgentIntegration: @unchecked Sendable {
     enum Kind: String, Sendable, Equatable, CaseIterable {
       /// All hooks (progress + notification) installed in one shot.
       case hooks
-      /// Both generated skills (`supacode-cli` and `supacode-deeplinks`) as one unit.
+      /// The generated skills (`supacode-cli`, `supacode-deeplinks`, `show-me`) as one unit.
       case skills
     }
   }

@@ -151,6 +151,9 @@ nonisolated struct TerminalClient: Sendable {
     /// Forwarded from the terminal manager for hook events received over the socket.
     /// `AppFeature` translates this into `agentPresence(.hookEventReceived)`.
     case agentHookEventReceived(AgentHookEvent)
+    /// `supacode show` from a terminal of this worktree: open the file and select the range.
+    /// `surfaceID` is the requesting terminal, which keeps focus.
+    case fileShowRequested(worktreeID: Worktree.ID, surfaceID: UUID, path: URL, selection: EditorSelection?)
     /// Flips when the "any live surface anywhere" aggregate changes. Lets
     /// menu / focused-action gates read one Bool instead of iterating
     /// `sidebarItems` from a view body.

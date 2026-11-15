@@ -72,6 +72,18 @@ enum MarkdownOpenRouter {
     return nil
   }
 
+  /// The editor tab already showing `relativePath`, if any.
+  static func editorTab(for relativePath: String, in layout: PaneLayout) -> TabItem? {
+    for pane in layout.panes {
+      for tab in pane.tabs {
+        if case .markdown(let state) = tab.content.state, state.relativePath == relativePath {
+          return tab
+        }
+      }
+    }
+    return nil
+  }
+
   /// Where `relativePath` opens. A fresh `newPaneID` bootstraps an empty layout.
   static func route(
     relativePath: String,
@@ -79,12 +91,8 @@ enum MarkdownOpenRouter {
     windowedPaneIDs: Set<PaneID>,
     newPaneID: @autoclosure () -> PaneID
   ) -> Route {
-    for pane in layout.panes {
-      for tab in pane.tabs {
-        if case .markdown(let state) = tab.content.state, state.relativePath == relativePath {
-          return .selectTab(tab.id)
-        }
-      }
+    if let tab = editorTab(for: relativePath, in: layout) {
+      return .selectTab(tab.id)
     }
     if let editorPane = layout.panes.first(where: { pane in
       pane.tabs.contains { $0.content.kind == .markdown }

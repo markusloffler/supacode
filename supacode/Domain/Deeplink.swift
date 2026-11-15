@@ -6,6 +6,8 @@ enum Deeplink: Equatable, Sendable {
   case activateLicense(key: String)
   case help
   case worktree(id: Worktree.ID, action: WorktreeAction, background: Bool = false)
+  /// Open a file in the editor of the worktree containing it, selecting `selection`.
+  case fileShow(path: URL, selection: EditorSelection?)
   case repoOpen(path: URL)
   case repoWorktreeNew(
     repositoryID: Repository.ID,

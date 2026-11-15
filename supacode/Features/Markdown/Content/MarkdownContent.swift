@@ -58,6 +58,15 @@ final class MarkdownContent: TabContent {
     }
   }
 
+  /// Selects a range in a live Markdown or code editor content (`supacode show`).
+  static func reveal(_ selection: EditorSelection, in id: ContentID, takesFocus: Bool, runtime: ContentRuntime) {
+    switch DiffSwitchingContent.unwrapped(runtime.content(for: id)) {
+    case let markdown as MarkdownContent: markdown.model.reveal(selection, takesFocus: takesFocus)
+    case let code as CodeEditorContent: code.model.reveal(selection, takesFocus: takesFocus)
+    default: break
+    }
+  }
+
   /// Publishes a Prompt Edit status to the editor that sent it.
   static func setPromptEditStatus(_ status: PromptEditStatus?, for id: ContentID, runtime: ContentRuntime) {
     let content = runtime.content(for: id)

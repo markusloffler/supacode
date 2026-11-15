@@ -4,6 +4,10 @@ import Foundation
 public nonisolated enum CLISkillContent {
   static let cliSkillName = "supacode-cli"
   static let deeplinksSkillName = "supacode-deeplinks"
+  static let showMeSkillName = "show-me"
+
+  /// Every generated skill, in install order. Install, update and uninstall cover them all.
+  static let skillNames = [cliSkillName, deeplinksSkillName, showMeSkillName]
 
   /// SKILL.md content for the CLI skill.
   static func cliSkill() throws -> String {
@@ -15,9 +19,15 @@ public nonisolated enum CLISkillContent {
     try deeplinksSkillCache.get()
   }
 
+  /// SKILL.md content for the show-me skill (`supacode show`).
+  static func showMeSkill() throws -> String {
+    try showMeSkillCache.get()
+  }
+
   // The bundled markdown is immutable for the process lifetime; read it once.
   private static let cliSkillCache = Result { try bundled(cliSkillName) }
   private static let deeplinksSkillCache = Result { try bundled(deeplinksSkillName) }
+  private static let showMeSkillCache = Result { try bundled(showMeSkillName) }
 
   /// The bundled markdown is missing from the app bundle (packaging bug).
   struct MissingResourceError: Error, LocalizedError {

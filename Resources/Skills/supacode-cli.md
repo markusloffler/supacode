@@ -100,6 +100,20 @@ supacode                          # Bring Supacode to front.
 supacode open                     # Same as above.
 ```
 
+### Show a file
+
+```
+supacode show <file>                                  # Open the file in the Supacode editor of its worktree.
+supacode show <file> --from 10 --to 20                # ...and select lines 10-20.
+supacode show <file> --from 10:5 --to 12:30           # ...or line 10 column 5 through line 12 column 30.
+```
+
+The file may be relative to the current directory. Positions are 1-based, `--to`
+is inclusive and defaults to `--from`, and a position without a column spans the
+whole line. The file must lie inside the worktree of the Supacode terminal you run
+in. `show` signals through that terminal instead of the control socket, so it
+also works from a sandboxed agent.
+
 ### Worktree
 
 ```
