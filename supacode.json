@@ -4,11 +4,12 @@
   "copyUntrackedOnWorktreeCreate" : true,
   "deleteScript" : "",
   "openActionID" : "xcode",
+  "openFileScript" : "",
   "pullRequestMergeStrategy" : "merge",
-  "runScript" : "make run-app",
+  "runScript" : "make build-app && install_local_supacode.sh",
   "scripts" : [
     {
-      "command" : "make run-app",
+      "command" : "make build-app && install_local_supacode.sh",
       "id" : "B90F7467-8638-4FB6-9CFC-450207596267",
       "kind" : "run",
       "name" : "Run"
